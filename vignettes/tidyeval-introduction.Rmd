@@ -1,0 +1,878 @@
+---
+title: "Introduction to tidyeval"
+output:
+  rmarkdown::html_vignette:
+    toc: true
+vignette: >
+  %\VignetteIndexEntry{Introduction to tidyeval}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\usepackage[utf8]{inputenc}
+---
+
+```{r setup, echo = FALSE, message = FALSE}
+knitr::opts_chunk$set(collapse = T, comment = "#>")
+options(tibble.print_min = 4L, tibble.print_max = 4L)
+library("dplyr")
+set.seed(1014)
+```
+
+Tidyverse grammars such as dplyr were originally designed for interactive use and analysis scripts. Part of it is that these grammars attempt to model how data analysts think about data problems. Another reason is that they make your data first class and let you refer to data frame columns as if they were distinct objects. While it contributes to make dplyr code look concise and to the point, this last aspect unfortunately has a dark side. It makes it harder to reduce duplication by wrapping tidyverse code in functions and loops. Writing functions around dplyr pipelines and other tidyeval APIs requires a bit of special knowledge because these APIs use a special type of functions called **quoting functions** in order to make data first class.
+
+If one-off code is often reasonable for common data analysis tasks, it is good practice to write reusable functions to reduce code duplication. In this vignette you will learn about quoting functions, what challenges they pose for programming, and the solutions that **tidy evaluation** provides to solve those problems.
+
+
+## Introduction
+
+### Writing functions with tidy eval
+
+Writing functions is essential for the clarity and robustness of your code. Functions have several advantages:
+
+1. They prevents inconsistencies because it enforces multiple computations to follow a single recipe.
+
+1. They emphasise what varies (the arguments) and what is constant (every other component of the computation).
+
+1. They make change easier because you only need to modify one place.
+
+1. They make your code clearer if you give the function and its arguments informative names.
+
+The process for creating a function is straightforward. First recognise duplication in your code. A good rule of thumb is to create a function when you have copy-pasted a piece of code three times. Can you spot the copy-paste mistake in this code duplication?
+
+```{r, eval = FALSE}
+(df$a - min(df$a)) / (max(df$a) - min(df$a))
+(df$b - min(df$b)) / (max(df$b) - min(df$b))
+(df$c - min(df$c)) / (max(df$c) - min(df$c))
+(df$d - min(df$d)) / (max(df$d) - min(df$c))
+```
+
+Now identify the variying parts of the expression and give them a name. `x` is an easy choice but it is often a good idea to reflect the type of argument expected in the name. In our case we expect a numeric vector:
+
+```{r, eval = FALSE}
+(num - min(num)) / (max(num) - min(num))
+(num - min(num)) / (max(num) - min(num))
+(num - min(num)) / (max(num) - min(num))
+(num - min(num)) / (max(num) - min(num))
+```
+
+We can now create a function with a relevant name:
+
+```{r, eval = FALSE}
+rescale01 <- function(num) {
+
+}
+```
+
+Fill it with our deduplicated code:
+
+```{r, eval = FALSE}
+rescale01 <- function(num) {
+  (num - min(num)) / (max(num) - min(num))
+}
+```
+
+And refactor a little to reduce duplication further and handle more cases:
+
+```{r, eval = FALSE}
+rescale01 <- function(num) {
+  rng <- range(num, na.rm = TRUE, finite = TRUE)
+  (num - rng[[1]]) / (rng[[2]] - rng[[1]])
+}
+```
+
+Now you can reuse your function any place you need it:
+
+```{r, eval = FALSE}
+rescale01(df$a)
+rescale01(df$b)
+rescale01(df$c)
+rescale01(df$d)
+```
+
+Reducing code duplication is as much needed with tidyverse grammars as with ordinary computations. Unfortunately, the straighforward process to create functions breaks down with grammars like dplyr. To see why, let's try to reproduce the process with a duplicated pipeline:
+
+```{r, eval = FALSE}
+df1 %>% group_by(x1) %>% summarise(mean = mean(y1))
+df2 %>% group_by(x2) %>% summarise(mean = mean(y2))
+df3 %>% group_by(x3) %>% summarise(mean = mean(y3))
+df4 %>% group_by(x4) %>% summarise(mean = mean(y4))
+```
+
+We first abtract out the varying parts by giving them informative names:
+
+```{r, eval = FALSE}
+data %>% group_by(group_var) %>% summarise(mean = mean(summary_var))
+```
+
+And wrap the pipeline with a function taking these argument names:
+
+```{r}
+grouped_mean <- function(data, group_var, summary_var) {
+  data %>%
+    group_by(group_var) %>%
+    summarise(mean = mean(summary_var))
+}
+```
+
+Unfortunately this function doesn't actually work. When you call it dplyr complains that the variable `group_var` is unknown:
+
+```{r, error = TRUE}
+grouped_mean(mtcars, cyl, mpg)
+```
+
+Here is the proper way of defining this function:
+
+```{r}
+grouped_mean <- function(data, group_var, summary_var) {
+  group_var <- enquo(group_var)
+  summary_var <- enquo(summary_var)
+
+  data %>%
+    group_by(!!group_var) %>%
+    summarise(mean = mean(!!summary_var))
+}
+```
+
+```{r}
+grouped_mean(mtcars, cyl, mpg)
+```
+
+To understand how that works, we need to learn about quoting functions and what special steps are needed to be effective at programming with them. Really we only need two new concepts forming together a single pattern: quoting and unquoting. This vignette will get you up to speed with this pattern.
+
+
+### Evaluating functions versus quoting functions
+
+R functions can be categorised in two broad categories: evaluating functions and quoting functions [^1]. These functions differ in the way they get their arguments. Evaluating functions take arguments as **values**. It does not matter what the expression supplied as argument is or which objects it contains. R computes the argument value following the standard rules of evaluation which the function receives passively [^2].
+
+The simplest regular function is `identity()`. It evaluates its single argument and returns the value. Because only the final value of the argument matters, all of these statements are completely equivalent:
+
+```{r}
+identity(6)
+
+identity(2 * 3)
+
+a <- 2
+b <- 3
+identity(a * b)
+```
+
+On the other hand, a quoting function is not passed the value of an expression, it is passed the *expression itself*. We say the argument has been automatically quoted. The quoted expression might be evaluated a bit later or might not be evaluated at all. The simplest quoting function is `quote()`. It automatically quotes its argument and returns the quoted expression without any evaluation.  Because only the expression passed as argument matters, none of these statements are equivalent:
+
+```{r}
+quote(6)
+
+quote(2 * 3)
+
+quote(a * b)
+```
+
+Other familiar quoting operators are `""` and `~`. The `""` operator quotes a piece of text at parsing time and returns a string. This prevents the text from being interpreted as some R code to evaluate. The tilde operator is similar to the `quote()` function in that it prevents R code from being automatically evaluated and returns a quoted expression in the form of a formula. The expression is then used to define a statistical model in modelling functions.  The three following expressions are doing something similar, they are quoting their input:
+
+```{r}
+"a * b"
+
+~a * b
+
+quote(a * b)
+```
+
+The first statement returns a quoted string and the other two return quoted code in a formula or as a bare expression.
+
+
+[^1]: In practice this is a bit more complex because most quoting functions evaluate at least one argument, usually the data argument.
+
+[^2]: This is why regular functions are said to use standard evaluation unlike quoting functions which use non-standard evaluation (NSE). Note that the function is not entirely passive. Because arguments are lazily evaluated, the function gets to decide when an argument is evaluated, if at all.
+
+
+#### Quoting and evaluating in mundane R code
+
+As an R programmer, you are probably already familiar with the distinction between quoting and evaluating functions. Take the case of subsetting a data frame column by name. The `[[` and `$` operators are both standard for this task but they are used in very different situations. The former supports indirect references like variables or expressions that represent a column name while the latter takes a column name directly:
+
+```{r}
+df <- data.frame(
+  y = 1,
+  var = 2
+)
+
+df$y
+
+var <- "y"
+df[[var]]
+```
+
+Technically, `[[` is an evaluating function while `$` is a quoting function.  You can indirectly refer to columns with `[[` because the subsetting index is evaluated, allowing indirect references. The following expressions are completely equivalent:
+
+```{r}
+df[[var]] # Indirect
+
+df[["y"]] # Direct
+```
+
+But these are not:
+
+```{r}
+df$var    # Direct
+
+df$y      # Direct
+```
+
+The following table summarises the fundamental asymmetry between the two subsetting methods:
+
+|          | Quoted | Evaluated   |
+| -------- |:------:|:-----------:|
+| Direct   | `df$y` | `df[["y"]]` |
+| Indirect | ???    | `df[[var]]` |
+
+
+#### Detecting quoting functions
+
+Because they work so differently to standard R code, it is important to recognise auto-quoted arguments. The documentation of the quoting function should normally tell you if an argument is quoted and evaluated in a special way. You can also detect quoted arguments by yourself with some experimentation. Let's take the following expressions involving a mix of quoting and evaluating functions:
+
+```{r}
+library(MASS)
+
+mtcars2 <- subset(mtcars, cyl == 4)
+
+sum(mtcars2$am)
+
+rm(mtcars2)
+```
+
+A good indication that an argument is auto-quoted and evaluated in a special way is that the argument will not work correctly outside of its original context. Let's try to break down each of these expressions in two steps by storing the arguments in an intermediary variable:
+
+1.
+    ```{r, error = TRUE}
+    temp <- MASS
+
+    temp <- "MASS"
+    library(temp)
+    ```
+
+    We get these errors because there is no `MASS` object for R to find, and `temp` is interpreted by `library()` directly as a package name rather than as an indirect reference. Let's try to break down the `subset()` expression:
+
+2.
+    ```{r, error = TRUE}
+    temp <- cyl == 4
+    ```
+
+    R cannot find `cyl` because we haven't specified where to find it. This object exists only inside the `mtcars` data frame.
+
+3.
+    ```{r, error = TRUE}
+    temp <- mtcars$am
+    sum(temp)
+    ```
+
+    It worked! `sum()` is an evaluating function and the indirect reference was resolved in the ordinary way.
+
+4.
+    ```{r, error = TRUE}
+    mtcars2 <- mtcars
+    temp <- "mtcars2"
+    rm(temp)
+
+    exists("mtcars2")
+    exists("temp")
+    ```
+
+    This time there was no error, but we have accidentally removed the variable `temp` instead of the variable it was referring to. This is because `rm()` auto-quotes its arguments.
+
+
+### Unquoting
+
+In practice, functions that evaluate their arguments are easier to program with because they support both direct and indirect references. For quoting functions, a piece of syntax is missing. We need the ability of **unquoting** arguments.
+
+
+#### Unquoting in base R
+
+Base R provides three different ways of allowing direct references:
+
+*   An extra function that evaluates its arguments. For instance the evaluating variant of the `$` operator is `[[`.
+
+
+*   An extra parameter that switches off auto-quoting. For instance `library()` evaluates its first argument if you set `character.only` to `TRUE`:
+
+    ```{r}
+    temp <- "MASS"
+    library(temp, character.only = TRUE)
+    ```
+
+*   An extra parameter that evaluates its argument. If you have a list of object names to pass to `rm()`, use the `list` argument:
+
+    ```{r}
+    temp <- "mtcars2"
+    rm(list = temp)
+
+    exists("mtcars2")
+    ```
+
+There is no general unquoting convention in base R so you have to read the documentation to figure out how to unquote an argument. Many functions like `subset()` or `transform()` do not provide any unquoting option at all.
+
+
+#### Unquoting in the tidyverse!!
+
+All quoting functions in the tidyverse support a single unquotation mechanism, the `!!` operator (pronounced **bang-bang**). You can use `!!` to cancel the automatic quotation and supply indirect references everywhere an argument is automatically quoted.
+
+First let's create a couple of variables that hold references to columns from the `mtcars` data frame. A simple way of creating these references is to use the fundamental quoting function `quote()`:
+
+```{r}
+# Variables referring to columns `cyl` and `mpg`
+x_var <- quote(cyl)
+y_var <- quote(mpg)
+
+x_var
+
+y_var
+```
+
+Here are a few examples of how `!!` is used throughout the tidyverse to unquote such references.
+
+*   In dplyr most verbs quote their arguments:
+
+    ```{r}
+    library("dplyr")
+
+    by_cyl <- mtcars %>%
+      group_by(!!x_var) %>%            # Refer to x_var
+      summarise(mean = mean(!!y_var))  # Refer to y_var
+    ```
+
+*   In ggplot2 `aes()` is the main quoting function:
+
+    ```{r}
+    library("ggplot2")
+
+    ggplot(mtcars, aes(!!x_var, !!y_var)) +  # Refer to x_var and y_var
+      geom_point()
+    ```
+
+    ggplot2 also features `vars()` which is useful for facetting:
+
+    ```{r}
+    ggplot(mtcars, aes(disp, drat)) +
+      geom_point() +
+      facet_grid(vars(!!x_var))  # Refer to x_var
+    ```
+
+Indirect references in quoting functions are rarely useful in scripts but they are invaluable for writing functions. With `!!` we can now easily fix our wrapper function. as we'll see in the following section.
+
+
+### Understanding `!!` with `qq_show()`
+
+At this point it is normal if the concept of unquoting still feels nebulous. A good way of practicing this operation is to see for yourself what it is really doing. To that end  the `qq_show()` function from the rlang package performs unquoting and prints the result at the screen. Here is what `!!` is really doing in the dplyr example (I've broken up the pipeline in two steps for readability):
+
+```{r}
+rlang::qq_show(mtcars %>% group_by(!!x_var))
+
+rlang::qq_show(data %>% summarise(mean = mean(!!y_var)))
+```
+
+Similarly for the ggplot2 pipeline:
+
+```{r}
+rlang::qq_show(ggplot(mtcars, aes(!!x_var, !!y_var)))
+
+rlang::qq_show(facet_grid(vars(!!x_var)))
+```
+
+As you can see, unquoting a variable that contains a reference to the column `cyl` is equivalent to directly supplying `cyl` to the dplyr function.
+
+
+## Quoting and unquoting arguments
+
+The basic process for creating tidyeval functions requires thinking a bit differently but is straightforward: quote and unquote.
+
+1. Use `enquo()` to make a function automatically quote its argument.
+1. Use `!!` to unquote the argument.
+
+Apart from these additional two steps, the process is the same.
+
+
+### The abstraction step
+
+We start as usual by identifying the varying parts of a computation and giving them informative names. These names become the arguments to the function.
+
+```{r, eval = FALSE}
+grouped_mean <- function(data, group_var, summary_var) {
+  data %>%
+    group_by(group_var) %>%
+    summarise(mean = mean(summary_var))
+}
+```
+
+As we have seen earlier this function does not quite work yet so let's fix it by applying the two new steps.
+
+
+### The quoting step
+
+The quoting step is about making our ordinary function a quoting function. Not all parameters should be automatically quoted though. For instance the `data` argument refers to a real data frame that is passed around in the ordinary way. It is crucial to identify which parameters of your function should be automatically quoted: the parameters for which it is allowed to refer to columns in the data frames. In the example, `group_var` and `summary_var` are the parameters that refer to the data.
+
+We know that the fundamental quoting function is `quote()` but how do we go about creating other quoting functions? This is the job of `enquo()`. While `quote()` quotes what *you* typed, `enquo()` quotes what *your user* typed. In other words it makes an argument automatically quote its input. This is exactly how dplyr verbs are created! Here is how to apply `enquo()` to the `group_var` and `summary_var` arguments:
+
+```{r, eval = FALSE}
+group_var <- enquo(group_var)
+summary_var <- enquo(summary_var)
+```
+
+
+### The unquoting step
+
+Finally we identify any place where these variables are passed to other quoting functions. That's where we need to unquote with `!!`. In this case we pass `group_var` to `group_by()` and `summary_var` to `summarise()`:
+
+```{r, eval = FALSE}
+data %>%
+  group_by(!!group_var) %>%
+  summarise(mean = mean(!!summary_var))
+```
+
+
+### Result
+
+The finalised function looks like this:
+
+```{r}
+grouped_mean <- function(data, group_var, summary_var) {
+  group_var <- enquo(group_var)
+  summary_var <- enquo(summary_var)
+
+  data %>%
+    group_by(!!group_var) %>%
+    summarise(mean = mean(!!summary_var))
+}
+```
+
+And voilà!
+
+```{r}
+grouped_mean(mtcars, cyl, mpg)
+
+grouped_mean(mtcars, cyl, disp)
+
+grouped_mean(mtcars, am, disp)
+```
+
+
+## Quoting and unquoting multiple arguments
+
+We have created a function that takes one grouping variable and one summary variable. It would make sense to take multiple grouping variables instead of just one. Quoting and unquoting multiple variables is pretty much the same process as for single arguments:
+
+* Unquoting multiple arguments requires a variant of `!!`, the big bang operator `!!!`.
+
+* Quoting multiple arguments can be done in two ways: internal quoting with the plural variant `enquos()` and external quoting with `vars()`.
+
+
+### Writing functions taking any number of arguments
+
+The dot-dot-dot argument is one of the nicest aspect of the R language. A function that takes `...` accepts any number of arguments, named or unnamed. As a programmer you can do three things with `...`:
+
+1.  **Evaluate** the arguments contained in the dots and materialise them in a list by forwarding the dots to `list()`:
+
+    ```{r}
+    materialise <- function(data, ...) {
+        dots <- list(...)
+        dots
+    }
+    ```
+
+    The dots names conveniently become the names of the list:
+
+    ```{r}
+    materialise(mtcars, 1 + 2, important_name = letters)
+    ```
+
+1.  **Quote** the arguments in the dots with `enquos()`:
+
+    ```{r}
+    capture <- function(data, ...) {
+        dots <- enquos(...)
+        dots
+    }
+    ```
+
+    All arguments passed to `...` are automatically quoted and returned as a list. The names of the arguments become the names of that list:
+
+    ```{r}
+    capture(mtcars, 1 + 2, important_name = letters)
+    ```
+
+1.  **Forward** the dots to another function:
+
+    ```{r}
+    forward <- function(data, ...) {
+      forwardee(...)
+    }
+    ```
+
+    When dots are forwarded the names of arguments in `...` are matched to the arguments of the forwardee:
+
+    ```{r}
+    forwardee <- function(foo, bar, ...) {
+      list(foo = foo, bar = bar, ...)
+    }
+    ```
+
+    Let's call the forwarding function with a bunch of named and unnamed arguments:
+
+    ```{r}
+    forward(mtcars, bar = 100, 1, 2, 3)
+    ```
+
+    The unnamed argument `1` was matched to `foo` positionally. The named argument `bar` was matched to `bar`. The remaining arguments were passed in order.
+
+For the purpose of writing tidy eval functions the last two techniques are important. There are two distinct situations:
+
+1. You don't need to modify the arguments in any way, just passing them through. Then simply forward `...` to other quoting functions in the ordinary way.
+
+1. You'd like to change the argument names (which become column names in `dplyr::mutate()` calls) or modify the arguments themselves (for instance negate a `dplyr::select()`ion). In that case you'll need to use `enquos()` to *quote* the arguments in the dots. You'll then pass the quoted arguments to other quoting functions by *forwarding* them with the help of `!!!`.
+
+
+### Simple forwarding of `...`
+
+If you are not modifying the arguments in `...` in any way and just want to pass them to another quoting function, just forward `...` like usual! There is no need for quoting and unquoting because of the magic of forwarding. The arguments in `...` are transported to their final destination where they will be quoted.
+
+The function `grouped_mean()` is still going to need some remodelling because it is good practice to take all important named arguments before the dots. Let's start by swapping `grouped_var` and `summary_var`:
+
+```{r}
+grouped_mean <- function(data, summary_var, group_var) {
+  summary_var <- enquo(summary_var)
+  group_var <- enquo(group_var)
+
+  data %>%
+    group_by(!!group_var) %>%
+    summarise(mean = mean(!!summary_var))
+}
+```
+
+Then we replace `group_var` with `...` and pass it to `group_by()`:
+
+```{r}
+grouped_mean <- function(data, summary_var, ...) {
+  summary_var <- enquo(summary_var)
+
+  data %>%
+    group_by(...) %>%
+    summarise(mean = mean(!!summary_var))
+}
+```
+
+It is good practice to make one final adjustment. Because arguments in `...` can have arbitrary names, we don't want to "use up" valid names. In tidyverse packages we use the convention of prefixing named arguments with a dot so that conflicts are less likely:
+
+```{r}
+grouped_mean <- function(.data, .summary_var, ...) {
+  .summary_var <- enquo(.summary_var)
+
+  .data %>%
+    group_by(...) %>%
+    summarise(mean = mean(!!.summary_var))
+}
+```
+
+Let's check this function now works with any number of grouping variables:
+
+```{r}
+grouped_mean(mtcars, disp, cyl, am)
+
+grouped_mean(mtcars, disp, cyl, am, vs)
+```
+
+
+### Quoting multiple arguments
+
+When we need to modify the arguments or their names, we can't simply forward the dots. We'll have to quote and unquote with the plural variants of `enquo()` and `!!`.
+
+- We'll quote the dots with `enquos()`.
+- We'll unquote-splice the quoted dots with `!!!`.
+
+While the singular `enquo()` returns a single quoted argument, the plural variant `enquos()` returns a list of quoted arguments. Let's use it to quote the dots:
+
+```{r}
+grouped_mean2 <- function(data, summary_var, ...) {
+  summary_var <- enquo(summary_var)
+  group_vars <- enquos(...)
+
+  data %>%
+    group_by(!!group_vars) %>%
+    summarise(mean = mean(!!summary_var))
+}
+```
+
+`grouped_mean()` now accepts and automatically quotes any number of grouping variables. However it doesn't work quite yet:
+
+**FIXME**: Depend on dev rlang to get a better error message.
+
+```{r, error = TRUE }
+grouped_mean2(mtcars, disp, cyl, am)
+```
+
+Instead of *forwarding* the individual arguments to `group_by()` we have passed the list of arguments itself! Unquoting is not the right operation here. Fortunately tidy eval provides a special operator that makes it easy to forward a list of arguments.
+
+
+### Unquoting multiple arguments
+
+The **unquote-splice** operator `!!!` takes each element of a list and unquotes them as independent arguments to the surrounding function call. The arguments are *spliced* in the function call. This is just what we need for forwarding multiple quoted arguments.
+
+Let's use `qq_show()` to observe the difference between `!!` and `!!!` in a `group_by()` expression. We can only use `enquos()` within a function so let's create a list of quoted names for the purpose of experimenting:
+
+```{r}
+vars <- list(
+  quote(cyl),
+  quote(am)
+)
+```
+
+`qq_show()` shows the difference between unquoting a list and unquote-splicing a list:
+
+```{r}
+rlang::qq_show(group_by(!!vars))
+
+rlang::qq_show(group_by(!!!vars))
+```
+
+When we use the unquote operator `!!`, `group_by()` gets a list of expressions. When we unquote-splice with `!!!`, the expressions are forwarded as individual arguments to `group_by()`. Let's use the latter to can fix `grouped_mean2()`:
+
+```{r}
+grouped_mean2 <- function(.data, .summary_var, ...) {
+  summary_var <- enquo(.summary_var)
+  group_vars <- enquos(...)
+
+  .data %>%
+    group_by(!!!group_vars) %>%
+    summarise(mean = mean(!!summary_var))
+}
+```
+
+The quote and unquote version of `grouped_mean()` does a bit more work but is functionally identical to the forwarding version:
+
+```{r}
+grouped_mean(mtcars, disp, cyl, am)
+
+grouped_mean2(mtcars, disp, cyl, am)
+```
+
+When does it become useful to do all this extra work? Whenever you need to modify the arguments or their names.
+
+Up to now we have used the quote-and-unquote pattern to pass quoted arguments to other quoting functions "as is". With this simple and powerful pattern you can extract complex combinations of quoting verbs into reusable functions.
+
+However tidy eval provides much more flexibility. It is a general purpose meta-programming framework that makes it easy to modify quoted arguments before evaluation. In this section you'll learn about basic metaprogramming patterns.
+
+
+## Modifying the names of quoted arguments
+
+Functions like `grouped_mean()` create new columns in the data frame. It might be helpful to automatically create names that reflect the meaning of those columns. In this section you'll learn how to create default names for quoted arguments and how to unquote names.
+
+
+### Default argument names
+
+If you are familiar with dplyr you have probably noticed that new columns are given default names when you don't supply one explictly to `mutate()` or `summarise()`. These default names are not practical for further manipulation but they are helpful to remind rushed users what their new column is about:
+
+```{r}
+starwars %>% summarise(average = mean(height, na.rm = TRUE))
+
+starwars %>% summarise(mean(height, na.rm = TRUE))
+```
+
+You can create default names by applying `quo_name()` to any expressions:
+
+```{r}
+var1 <- quote(height)
+var2 <- quote(mean(height))
+
+quo_name(var1)
+quo_name(var2)
+```
+
+Including automatically quoted arguments:
+
+```{r}
+arg_name <- function(var) {
+  var <- enquo(var)
+
+  quo_name(var)
+}
+
+arg_name(height)
+
+arg_name(mean(height))
+```
+
+Lists of quoted expressions require a different approach because we don't want to override user-supplied names. The easiest way is call `enquos()` with `.named = TRUE`. When this option, all unnamed arguments get a default name:
+
+```{r}
+args_names <- function(...) {
+  vars <- enquos(..., .named = TRUE)
+  names(vars)
+}
+
+args_names(mean(height), weight)
+
+args_names(avg = mean(height), weight)
+```
+
+
+### Unquoting argument names
+
+Argument names are one of the most common occurrence of quotation in R. There is no fundamental difference between these two ways of creating a `"myname"` string:
+
+```{r}
+names(c(Mickey = NA))
+
+quo_name(quote(Mickey))
+```
+
+Where there is quotation it is natural to have unquotation. For this reason, tidy eval makes it possible to use `!!` to unquote names. Unfortunately we'll have to use a somewhat peculiar syntax to unquote names because using complex expressions on the left-hand side of `=` is not valid R code:
+
+```{r, error = TRUE}
+nm <- "Mickey"
+args_names(!!nm = 1)
+```
+
+Instead you'll have to unquote of the LHS of `:=`. This vestigial operator is interpreted by tidy eval functions in exactly the same way as `=` but with `!!` support:
+
+```{r}
+nm <- "Mickey"
+args_names(!!nm := 1)
+```
+
+Another way of achieving the same result is to splice a named list of arguments:
+
+```{r}
+args <- setNames(list(1), nm)
+args_names(!!!args)
+```
+
+This works because `!!!` uses the names of the list as argument names. This is a great pattern when you are dealing with multiple arguments:
+
+```{r}
+nms <- c("Mickey", "Minnie")
+args <- setNames(list(1, 2), nms)
+args_names(!!!args)
+```
+
+
+### Prefixing quoted arguments
+
+Now that we know how to unquote argument, let's apply informative prefixes to the names of the columns created in `grouped_mean()`. We'll start with the summary variable:
+
+1. Get the default name of the quoted summary variable.
+2. Prepend it with a prefix.
+3. Unquote it with `!!` and `:=`.
+
+```{r}
+grouped_mean2 <- function(.data, .summary_var, ...) {
+  summary_var <- enquo(.summary_var)
+  group_vars <- enquos(...)
+
+  # Get and modify the default name
+  summary_nm <- quo_name(summary_var)
+  summary_nm <- paste0("avg_", summary_nm)
+
+  .data %>%
+    group_by(!!!group_vars) %>%
+    summarise(!!summary_nm := mean(!!summary_var))  # Unquote the name
+}
+
+grouped_mean2(mtcars, disp, cyl, am)
+
+names(grouped_mean2(mtcars, disp, cyl, am))
+```
+
+Regarding the grouping variables, this is a case where explictly quoting and unquoting `...` pays off because we need to change the names of the list of quoted dots:
+
+- Give default names to quoted dots with `.named = TRUE`.
+- Prepend the names of the list with a prefix.
+- Unquote-splice the list of quoted arguments as usual.
+
+```{r}
+grouped_mean2 <- function(.data, .summary_var, ...) {
+  summary_var <- enquo(.summary_var)
+
+  # Quote the dots with default names
+  group_vars <- enquos(..., .named = TRUE)
+
+  summary_nm <- quo_name(summary_var)
+  summary_nm <- paste0("avg_", summary_nm)
+
+  # Modify the names of the list of quoted dots
+  names(group_vars) <- paste0("groups_", names(group_vars))
+
+  .data %>%
+    group_by(!!!group_vars) %>%  # Unquote-splice as usual
+    summarise(!!summary_nm := mean(!!summary_var))
+}
+
+grouped_mean2(mtcars, disp, cyl, am)
+
+names(grouped_mean2(mtcars, disp, cyl, am))
+```
+
+
+## Modifying quoted arguments
+
+The quote-and-unquote pattern is a powerful and versatile technique. In this section we'll use it for modifying quoted arguments.
+
+Say we would like a version of `grouped_mean()` where we take multiple summary variables rather than multiple grouping variables. We could start by replacing `summary_var` with the `...` argument:
+
+```{r}
+grouped_mean3 <- function(.data, .group_var, ...) {
+  group_var <- enquo(.group_var)
+  summary_vars <- enquos(..., .named = TRUE)
+
+  .data %>%
+    group_by(!!group_var) %>%
+    summarise(!!!summary_vars)  # How do we take the mean?
+}
+```
+
+The quoting part is easy. But how do we go about taking the average of each argument before passing them on to `summarise()`? We'll have to modify the list of summary variables.
+
+
+### Expanding quoted expressions with `expr()`
+
+Quoting and unquoting is an effective technique for modifying quoted expressions. But we'll need to add one more function to our toolbox to work around the lack of unquoting support in `quote()`.
+
+As we saw, the fundamental quoting function in R is `quote()`. All it does is return its quoted argument:
+
+```{r}
+quote(mean(mass))
+```
+
+`quote()` does not support quasiquotation but tidy eval provides a variant that does. With `expr()`, you can quote expressions with full unquoting support:
+
+```{r}
+vars <- list(quote(mass), quote(height))
+
+expr(mean(!!vars[[1]]))
+
+expr(group_by(!!!vars))
+```
+
+Note what just happened: by quoting-and-unquoting, we have expanded existing quoted expressions! This is the key to modifying expressions before passing them on to other quoting functions. For instance we could loop over the summary variables and unquote each of them in a `mean()` expression:
+
+```{r}
+purrr::map(vars, function(var) expr(mean(!!var, na.rm = TRUE)))
+```
+
+Let's fix `grouped_mean3()` using this pattern:
+
+```{r}
+grouped_mean3 <- function(.data, .group_var, ...) {
+  group_var <- enquo(.group_var)
+  summary_vars <- enquos(..., .named = TRUE)
+
+  # Wrap the summary variables with mean()
+  summary_vars <- purrr::map(summary_vars, function(var) {
+    expr(mean(!!var, na.rm = TRUE))
+  })
+
+  # Prefix the names with `avg_`
+  names(summary_vars) <- paste0("avg_", names(summary_vars))
+
+  .data %>%
+    group_by(!!group_var) %>%
+    summarise(!!!summary_vars)
+}
+```
+
+```{r}
+grouped_mean3(starwars, species, height)
+
+grouped_mean3(starwars, species, height, mass)
+```
