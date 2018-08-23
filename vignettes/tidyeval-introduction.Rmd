@@ -449,4 +449,63 @@ grouped_mean(mtcars, cyl, disp)
 grouped_mean(mtcars, am, disp)
 ```
 
-This simple quote-and-unquote pattern will get you a long way. In the next vignette, we'll learn about more complex cases involving `...`.
+This simple quote-and-unquote pattern will get you a long way. It makes it possible to abstract complex combinations of quoting functions into a new quoting function. However this gets us in a sort of loop: quoting functions unquote inside other quoting functions and so on. At the start of the loop is the user typing expressions that are automatically quoted. But what if we can't or don't want to start with expressions typed by the user? What if we'd like to start with a character vector of column names?
+
+
+## Calling quoting functions with strings
+
+So far we have created a quoting function that wraps around other quoting functions. How can we break this chain of quoting? How can we go from the evaluating world to the quoting universe? The most common way this transition occurs is when you start with a character vector of column names and somehow need to pass the corresponding columns to quoting functions like `dplyr::mutate()`, `dplyr::select()`, or `ggplot2::aes()`. We need a way of bridging evaluating and quoting functions.
+
+First let's see why simply unquoting strings does not work:
+
+```{r, error = TRUE}
+var <- "height"
+mutate(starwars, rescaled = !!var * 100)
+```
+
+We get a type error. Observing the result of unquoting with `qq_show()` will shed some light on this:
+
+```{r}
+rlang::qq_show(mutate(starwars, rescaled = !!var * 100))
+```
+
+We have unquoted a string, and now dplyr tried to multiply that string by 100! There is a fundamental difference between these two objects:
+
+```{r}
+"height"
+
+quote(height)
+```
+
+`"heiht"` is a string and `quote(height)` is a **symbol**, or variable name. A symbol is much more than a string, it is a reference to an R object. That's why you have to use symbols to refer to data frame columns. Fortunately transforming strings to symbols is straightforward with the tidy eval `sym()` function:
+
+```{r}
+sym("height")
+```
+
+If you use `sym()` instead of `enquo()`, you end up with an evaluating function that transforms its inputs into symbols that can suitably be unquoted:
+
+```{r}
+grouped_mean2 <- function(data, group_var, summary_var) {
+  group_var <- sym(group_var)
+  summary_var <- sym(summary_var)
+
+  data %>%
+    group_by(!!group_var) %>%
+    summarise(mean = mean(!!summary_var))
+}
+```
+
+With this simple change we now have an *evaluating* wrapper which can be used in the same way as `[[`. You can call `grouped_mean2()` with direct references:
+
+```{r}
+grouped_mean2(starwars, "gender", "mass")
+```
+
+Or indirect references:
+
+```{r}
+grp_var <- "gender"
+sum_var <- "mass"
+grouped_mean2(starwars, grp_var, sum_var)
+```
