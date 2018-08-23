@@ -1,0 +1,8 @@
+bookdown::gitbook:
+  config:
+    toc:
+      collapse: section
+      before: |
+        <li><strong><a href="./">Tidy evaluation</a></strong></li>
+    sharing: no
+  css: adv-r.css
