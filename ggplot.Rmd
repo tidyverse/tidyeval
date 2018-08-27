@@ -4,5 +4,5 @@ source("setup.R")
 library("ggplot2")
 ```
 
-# Recipes for ggplot2
+# ggplot2
 

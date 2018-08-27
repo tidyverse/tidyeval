@@ -7,8 +7,8 @@ rmd_files:
     "introduction.Rmd",
     "dotdotdot.Rmd",
     "modify.Rmd",
-    "dplyr-recipes.Rmd",
-    "ggplot-recipes.Rmd",
+    "dplyr.Rmd",
+    "ggplot.Rmd",
     "toolbox.Rmd",
     "grammar.Rmd",
   ]

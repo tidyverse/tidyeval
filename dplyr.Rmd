@@ -1,12 +1,12 @@
 
-# (PART) Recipes {-}
+# (PART) Cookbooks {-}
 
 ```{r setup, include = FALSE}
 source("setup.R")
 library("dplyr")
 ```
 
-# Recipes for dplyr
+# dplyr
 
 In the introductory vignette we learned that creating tidy eval functions boils down to a single pattern: quote and unquote. In this vignette we'll apply this pattern in a series of recipes for dplyr.
 
