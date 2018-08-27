@@ -461,7 +461,12 @@ We get a type error. Observing the result of unquoting with `qq_show()` will she
 rlang::qq_show(mutate(starwars, rescaled = !!var * 100))
 ```
 
-We have unquoted a string, and now dplyr tried to multiply that string by 100! There is a fundamental difference between these two objects:
+We have unquoted a string, and now dplyr tried to multiply that string by 100!
+
+
+### Strings
+
+There is a fundamental difference between these two objects:
 
 ```{r}
 "height"
@@ -469,7 +474,7 @@ We have unquoted a string, and now dplyr tried to multiply that string by 100! T
 quote(height)
 ```
 
-`"heiht"` is a string and `quote(height)` is a **symbol**, or variable name. A symbol is much more than a string, it is a reference to an R object. That's why you have to use symbols to refer to data frame columns. Fortunately transforming strings to symbols is straightforward with the tidy eval `sym()` function:
+`"height"` is a string and `quote(height)` is a **symbol**, or variable name. A symbol is much more than a string, it is a reference to an R object. That's why you have to use symbols to refer to data frame columns. Fortunately transforming strings to symbols is straightforward with the tidy eval `sym()` function:
 
 ```{r}
 sym("height")
@@ -501,3 +506,36 @@ grp_var <- "gender"
 sum_var <- "mass"
 grouped_mean2(starwars, grp_var, sum_var)
 ```
+
+
+### Character vectors of column names
+
+What if you have a whole character vector of column names? You can transform vectors to a list of symbols with the plural variant `syms()`:
+
+```{r}
+cols <- syms(c("species", "gender"))
+
+cols
+```
+
+But now we have a list. Can we just unquote a list of symbols with `!!`?
+
+```{r, error = TRUE}
+group_by(starwars, !!cols)
+```
+
+Something's wrong. Using `qq_show()`, we see that `group_by()` gets a list instead of the individual symbols:
+
+```{r}
+rlang::qq_show(group_by(starwars, !!cols))
+```
+
+We should unquote each symbol in the list as a separate argument. The big bang operator `!!!` makes this easy:
+
+```{r}
+rlang::qq_show(group_by(starwars, !!cols[[1]], !!cols[[2]]))
+
+rlang::qq_show(group_by(starwars, !!!cols))
+```
+
+Working with multiple arguments and lists of expressions requires specific techniques such as using `!!!`. These techniques are covered in the next chapter.
