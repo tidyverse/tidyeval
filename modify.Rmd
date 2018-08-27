@@ -6,9 +6,15 @@ library("dplyr")
 
 # Modifying inputs
 
+
+
+
 ## Modifying names
 
-Functions like `grouped_mean()` create new columns in the data frame. It might be helpful to automatically create names that reflect the meaning of those columns. In this section you'll learn how to create default names for quoted arguments and how to unquote names.
+When your function creates new columns in a data frame it's often a good idea to give them names that reflect the meaning of those columns. In this section you'll learn how to:
+
+* Create default names for quoted arguments.
+* Unquote names.
 
 
 ### Default argument names

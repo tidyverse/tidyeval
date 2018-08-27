@@ -1,18 +1,15 @@
 Package: tidyeval
-Title: Tidy evaluation tools for working with quoting functions
+Title: Tidy evaluation
 Version: 0.0.0.9000
 Authors@R: c(
     person("Lionel", "Henry", ,"lionel@rstudio.com", c("aut", "cre")),
-    person("RStudio", role = "cph")
-)
-Description: Tools for creating language objects and for working
-    with tidy evaluation functions. Also includes a framework to
-    create data-masking interfaces such as 'dplyr'.
+    person("Hadley", "Wickham", ,"hadley@rstudio.com", "aut"),
+    person("RStudio", role = "cph"))
 Depends:
     R (>= 3.1.0)
-License: GPL-3
-Encoding: UTF-8
-LazyData: true
-ByteCompile: true
+Imports:
+    dplyr,
+    ggplot2 (>= 3.0.0),
+    rlang (>= 0.2.3)
 URL: http://tidyeval.tidyverse.org, https://github.com/tidyverse/tidyeval
 BugReports: https://github.com/tidyverse/tidyeval/issues
