@@ -4,9 +4,9 @@ source("setup.R")
 library("dplyr")
 ```
 
-# Dealing with multiple arguments
+# Dealing with multiple arguments {#multiple}
 
-We have created a function that takes one grouping variable and one summary variable. It would make sense to take multiple grouping variables instead of just one. Quoting and unquoting multiple variables is pretty much the same process as for single arguments:
+In the first chapter we have created `grouped_mean()`, a function that takes one grouping variable and one summary variable and computes the grouped average. It would make sense to take multiple grouping variables instead of just one. Quoting and unquoting multiple variables is pretty much the same process as for single arguments:
 
 * Unquoting multiple arguments requires a variant of `!!`, the big bang operator `!!!`.
 
@@ -205,4 +205,4 @@ When does it become useful to do all this extra work? Whenever you need to modif
 
 Up to now we have used the quote-and-unquote pattern to pass quoted arguments to other quoting functions "as is". With this simple and powerful pattern you can extract complex combinations of quoting verbs into reusable functions.
 
-However tidy eval provides much more flexibility. It is a general purpose meta-programming framework that makes it easy to modify quoted arguments before evaluation. In this section you'll learn about basic metaprogramming patterns.
+However tidy eval provides much more flexibility. It is a general purpose meta-programming framework that makes it easy to modify quoted arguments before evaluation. In the next section you'll learn about basic metaprogramming patterns that will allow you to modify expressions before passing them on to other .

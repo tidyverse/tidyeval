@@ -6,7 +6,7 @@ library("dplyr")
 
 # Modifying inputs
 
-
+With the quote-and-unquote pattern, quoted arguments are passed to other functions as is. In many cases you'll find this to be too restrictive. This chapter will guide you through the steps required to pass custom argument names and custom quoted expressions.
 
 
 ## Modifying names
@@ -166,7 +166,7 @@ names(grouped_mean2(mtcars, disp, cyl, am))
 
 The quote-and-unquote pattern is a powerful and versatile technique. In this section we'll use it for modifying quoted arguments.
 
-Say we would like a version of `grouped_mean()` where we take multiple summary variables rather than multiple grouping variables. We could start by replacing `summary_var` with the `...` argument:
+In [dealing with multiple arguments](#multiple), we have created a version of `grouped_mean()` that takes multiple grouping variables. Say we would like to take multiple summary variables instead. We could start by replacing `summary_var` with the `...` argument:
 
 ```{r}
 grouped_mean3 <- function(.data, .group_var, ...) {
