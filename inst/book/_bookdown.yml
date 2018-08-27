@@ -6,6 +6,7 @@ rmd_files:
     "index.Rmd",
     "introduction.Rmd",
     "dotdotdot.Rmd",
+    "modify.Rmd",
     "dplyr-recipes.Rmd",
     "ggplot-recipes.Rmd",
     "toolbox.Rmd",
