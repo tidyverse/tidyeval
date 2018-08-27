@@ -1,21 +1,21 @@
 
-# Getting up to speed with tidy eval
+# (PART) Principles {-}
 
-```{r setup, echo = FALSE, message = FALSE}
-knitr::opts_chunk$set(collapse = T, comment = "#>")
-options(tibble.print_min = 4L, tibble.print_max = 4L)
+```{r setup, include = FALSE}
+source("setup.R")
 library("dplyr")
-set.seed(1014)
 ```
+
+# Getting up to speed
 
 Tidyverse grammars such as dplyr were originally designed for interactive use and analysis scripts. Part of it is that these grammars attempt to model how data analysts think about data problems. Another reason is that they make your data first class and let you refer to data frame columns as if they were distinct objects. While it contributes to make dplyr code look concise and to the point, this last aspect unfortunately has a dark side. It makes it harder to reduce duplication by wrapping tidyverse code in functions and loops. Writing functions around dplyr pipelines and other tidyeval APIs requires a bit of special knowledge because these APIs use a special type of functions called **quoting functions** in order to make data first class.
 
 If one-off code is often reasonable for common data analysis tasks, it is good practice to write reusable functions to reduce code duplication. In this vignette you will learn about quoting functions, what challenges they pose for programming, and the solutions that **tidy evaluation** provides to solve those problems.
 
 
-## Introduction
+## Writing functions
 
-### Writing functions with tidy eval
+### Reducing duplication
 
 Writing functions is essential for the clarity and robustness of your code. Functions have several advantages:
 
@@ -130,7 +130,7 @@ grouped_mean(mtcars, cyl, mpg)
 To understand how that works, we need to learn about quoting functions and what special steps are needed to be effective at programming with them. Really we only need two new concepts forming together a single pattern: quoting and unquoting. This vignette will get you up to speed with this pattern.
 
 
-### Evaluating functions versus quoting functions
+### What's special about quoting functions?
 
 R functions can be categorised in two broad categories: evaluating functions and quoting functions [^1]. These functions differ in the way they get their arguments. Evaluating functions take arguments as **values**. It does not matter what the expression supplied as argument is or which objects it contains. R computes the argument value following the standard rules of evaluation which the function receives passively [^2].
 
@@ -268,7 +268,7 @@ A good indication that an argument is auto-quoted and evaluated in a special way
     This time there was no error, but we have accidentally removed the variable `temp` instead of the variable it was referring to. This is because `rm()` auto-quotes its arguments.
 
 
-### Unquoting
+### Unquotation
 
 In practice, functions that evaluate their arguments are easier to program with because they support both direct and indirect references. For quoting functions, a piece of syntax is missing. We need the ability of **unquoting** arguments.
 
@@ -368,7 +368,7 @@ rlang::qq_show(facet_grid(vars(!!x_var)))
 As you can see, unquoting a variable that contains a reference to the column `cyl` is equivalent to directly supplying `cyl` to the dplyr function.
 
 
-## Quoting and unquoting arguments
+## Quote and unquote
 
 The basic process for creating tidyeval functions requires thinking a bit differently but is straightforward: quote and unquote.
 
@@ -444,7 +444,7 @@ grouped_mean(mtcars, am, disp)
 This simple quote-and-unquote pattern will get you a long way. It makes it possible to abstract complex combinations of quoting functions into a new quoting function. However this gets us in a sort of loop: quoting functions unquote inside other quoting functions and so on. At the start of the loop is the user typing expressions that are automatically quoted. But what if we can't or don't want to start with expressions typed by the user? What if we'd like to start with a character vector of column names?
 
 
-## Calling quoting functions with strings
+## Strings instead of quotes
 
 So far we have created a quoting function that wraps around other quoting functions. How can we break this chain of quoting? How can we go from the evaluating world to the quoting universe? The most common way this transition occurs is when you start with a character vector of column names and somehow need to pass the corresponding columns to quoting functions like `dplyr::mutate()`, `dplyr::select()`, or `ggplot2::aes()`. We need a way of bridging evaluating and quoting functions.
 

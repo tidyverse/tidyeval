@@ -1,13 +1,10 @@
 
-# Dealing with multiple arguments
-
-```{r setup, echo = FALSE, message = FALSE}
-knitr::opts_chunk$set(collapse = T, comment = "#>")
-options(tibble.print_min = 4L, tibble.print_max = 4L)
+```{r setup, include = FALSE}
+source("setup.R")
 library("dplyr")
-set.seed(1014)
 ```
 
+# Dealing with multiple arguments
 
 ## Quoting and unquoting multiple arguments
 

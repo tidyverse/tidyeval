@@ -1,0 +1,430 @@
+
+# (PART) Recipes {-}
+
+```{r setup, include = FALSE}
+source("setup.R")
+library("dplyr")
+```
+
+# Recipes for dplyr
+
+In the introductory vignette we learned that creating tidy eval functions boils down to a single pattern: quote and unquote. In this vignette we'll apply this pattern in a series of recipes for dplyr.
+
+This vignette is organised so that you can quickly find your way to a copy-paste solution when you face an immediate problem.
+
+
+## Patterns for single arguments
+
+### `enquo()` and `!!` - Quote and unquote arguments
+
+We start with a quick recap of the introductory vignette. Creating a function around dplyr pipelines involves three steps: abstraction, quoting, and unquoting.
+
+
+*   **Abstraction step**
+
+    First identify the varying parts:
+
+    ```{r, eval = FALSE}
+    df1 %>% group_by(x1) %>% summarise(mean = mean(y1))
+    df2 %>% group_by(x2) %>% summarise(mean = mean(y2))
+    df3 %>% group_by(x3) %>% summarise(mean = mean(y3))
+    df4 %>% group_by(x4) %>% summarise(mean = mean(y4))
+    ```
+
+    And abstract those away with a informative argument names:
+
+    ```{r, eval = FALSE}
+    data %>% group_by(group_var) %>% summarise(mean = mean(summary_var))
+    ```
+
+    And wrap in a function:
+
+    ```{r}
+    grouped_mean <- function(data, group_var, summary_var) {
+      data %>%
+        group_by(group_var) %>%
+        summarise(mean = mean(summary_var))
+    }
+    ```
+
+
+*   **Quoting step**
+
+    Identify all the arguments where the user is allowed to refer to data frame columns directly. The function can't evaluate these arguments right away. Instead they should be automatically quoted. Apply `enquo()` to these arguments
+
+    ```{r, eval = FALSE}
+    group_var <- enquo(group_var)
+    summary_var <- enquo(summary_var)
+    ```
+
+
+*   **Unquoting step**
+
+    Identify where these variables are passed to other quoting functions and unquote with `!!`. In this case we pass `group_var` to `group_by()` and `summary_var` to `summarise()`:
+
+    ```{r, eval = FALSE}
+    data %>%
+      group_by(!!group_var) %>%
+      summarise(mean = mean(!!summary_var))
+    ```
+
+We end up with a function that automatically quotes its arguments `group_var` and `summary_var` and unquotes them when they are passed to other quoting functions:
+
+```{r}
+grouped_mean <- function(data, group_var, summary_var) {
+  group_var <- enquo(group_var)
+  summary_var <- enquo(summary_var)
+
+  data %>%
+    group_by(!!group_var) %>%
+    summarise(mean = mean(!!summary_var))
+}
+
+grouped_mean(mtcars, cyl, mpg)
+```
+
+
+### `quo_name()` - Create default column names
+
+Use `quo_name()` to transform a quoted expression to a column name:
+
+```{r}
+simple_var <- quote(height)
+quo_name(simple_var)
+```
+
+These names are only a default stopgap. For more complex uses, you'll probably want to let the user override the default. Here is a case where the default name is clearly suboptimal:
+
+```{r}
+complex_var <- quote(mean(height, na.rm = TRUE))
+quo_name(complex_var)
+```
+
+
+### `:=` and `!!` - Unquote column names
+
+In expressions like `c(name = NA)`, the argument name is quoted. Because of the quoting it's not possible to make an indirect reference to a variable that contains a name:
+
+```{r}
+name <- "the real name"
+c(name = NA)
+```
+
+In tidy eval function it is possible to unquote argument names with `!!`. However you need the special `:=` operator:
+
+```{r}
+rlang::qq_show(c(!!name := NA))
+```
+
+This unusual operator is needed because using `!` on the left-hand side of `=` is not valid R code:
+
+```{r, error = TRUE}
+rlang::qq_show(c(!!name = NA))
+```
+
+Let's use this `!!` technique to pass custom column names to `group_by()` and `summarise()`:
+
+```{r}
+grouped_mean <- function(data, group_var, summary_var) {
+  group_var <- enquo(group_var)
+  summary_var <- enquo(summary_var)
+
+  # Create default column names
+  group_nm <- quo_name(group_var)
+  summary_nm <- quo_name(summary_var)
+
+  # Prepend with an informative prefix
+  group_nm <- paste0("group_", group_nm)
+  summary_nm <- paste0("mean_", summary_nm)
+
+  data %>%
+    group_by(!!group_nm := !!group_var) %>%
+    summarise(!!summary_nm := mean(!!summary_var))
+}
+
+grouped_mean(mtcars, cyl, mpg)
+```
+
+
+## Patterns for multiple arguments
+
+### `...` - Forward multiple arguments
+
+We have created a function that takes one grouping variable and one summary variable. It would make sense to take multiple grouping variables instead of just one. Let's adjust our function with a `...` argument.
+
+1.  Replace `group_var` by `...`:
+
+    ```{r, eval = FALSE}
+    function(data, ..., summary_var)
+    ```
+
+1.  Swap `...` and `summary_var` because arguments on the right-hand side of `...` are harder to pass. They can only be passed with their full name explictly specified while arguments on the left-hand side can be passed without name:
+
+    ```{r, eval = FALSE}
+    function(data, summary_var, ...)
+    ```
+
+1.  It's good practice to prefix named arguments with a `.` to reduce the risk of conflicts between your arguments and the arguments passed to `...`:
+
+    ```{r, eval = FALSE}
+    function(.data, .summary_var, ...)
+    ```
+
+Because of the magic of dots forwarding we don't have to use the quote-and-unquote pattern. We can just pass `...` to other quoting functions like `group_by()`:
+
+```{r}
+grouped_mean <- function(.data, .summary_var, ...) {
+  summary_var <- enquo(.summary_var)
+
+  .data %>%
+    group_by(...) %>%  # Forward `...`
+    summarise(mean = mean(!!summary_var))
+}
+
+grouped_mean(mtcars, disp, cyl, am)
+```
+
+Forwarding `...` is straightforward but has the downside that you can't modify the arguments or their names.
+
+
+### `enquos()` and `!!!` - Quote and unquote multiple arguments
+
+Quoting and unquoting multiple variables with `...` is pretty much the same process as for single arguments:
+
+* Quoting multiple arguments can be done in two ways: internal quoting with the plural variant `enquos()` and external quoting with `vars()`. Use internal quoting when your function takes expressions with `...` and external quoting when your function takes a list of expressions.
+
+* Unquoting multiple arguments requires a variant of `!!`, the unquote-splice operator `!!!` which unquotes each element of a list as an independent argument in the surrounding function call.
+
+Quote the dots with `enquos()` and unquote-splice them with `!!!`:
+
+```{r}
+grouped_mean2 <- function(.data, .summary_var, ...) {
+  summary_var <- enquo(.summary_var)
+  group_vars <- enquos(...)  # Get a list of quoted dots
+
+  .data %>%
+    group_by(!!!group_vars) %>%  # Unquote-splice the list
+    summarise(mean = mean(!!summary_var))
+}
+
+grouped_mean2(mtcars, disp, cyl, am)
+```
+
+The quote-and-unquote pattern does more work than simple forwarding of `...` and is functionally identical. Don't do this extra work unless you need to modify the arguments or their names.
+
+
+### `expr()` - Modify quoted arguments
+
+Modifying quoted expressions is often necessary when dealing with multiple arguments. Say we'd like a `grouped_mean()` variant that takes multiple summary variables rather than multiple grouping variables. We need to somehow take the `mean()` of each summary variable.
+
+One easy way is to use the quote-and-unquote pattern with `expr()`. This function is just like `quote()` from base R. It plainly returns your argument, quoted:
+
+```{r}
+quote(height)
+
+expr(height)
+
+
+quote(mean(height))
+
+expr(mean(height))
+```
+
+But `expr()` has a twist, it has full unquoting support:
+
+```{r}
+vars <- list(quote(height), quote(mass))
+
+expr(mean(!!vars[[1]]))
+
+expr(group_by(!!!vars))
+```
+
+You can loop over a list of arguments and modify each of them:
+
+```{r}
+purrr::map(vars, function(var) expr(mean(!!var, na.rm = TRUE)))
+```
+
+This makes it easy to take multiple summary variables, wrap them in a call to `mean()`, before unquote-splicing within `summarise()`:
+
+```{r}
+grouped_mean3 <- function(.data, .group_var, ...) {
+  group_var <- enquo(.group_var)
+  summary_vars <- enquos(...)  # Get a list of quoted summary variables
+
+  summary_vars <- purrr::map(summary_vars, function(var) {
+    expr(mean(!!var, na.rm = TRUE))
+  })
+
+  .data %>%
+    group_by(!!group_var) %>%
+    summarise(!!!summary_vars)  # Unquote-splice the list
+}
+```
+
+
+### `vars()` - Quote multiple arguments externally
+
+How could we take multiple summary variables in addition to multiple grouping variables? Internal quoting with `...` has a major disadvantage: the arguments in `...` can only have one purpose. If you need to quote multiple sets of variables you have to delegate the quoting to another function. That's the purpose of `vars()` which quotes its arguments and returns a list:
+
+```{r}
+vars(species, gender)
+```
+
+The arguments can be complex expressions and have names:
+
+```{r}
+vars(h = height, m = mass / 100)
+```
+
+When the quoting is external you don't use `enquos()`. Simply take lists of expressions in your function and forward the lists to other quoting functions with `!!!`:
+
+```{r, error = TRUE}
+grouped_mean3 <- function(data, group_vars, summary_vars) {
+  stopifnot(
+    is.list(group_vars),
+    is.list(summary_vars)
+  )
+
+  summary_vars <- purrr::map(summary_vars, function(var) {
+    expr(mean(!!var, na.rm = TRUE))
+  })
+
+  data %>%
+    group_by(!!!group_vars) %>%
+    summarise(n = n(), !!!summary_vars)
+}
+
+grouped_mean3(starwars, vars(species, gender), vars(height))
+
+grouped_mean3(starwars, vars(gender), vars(height, mass))
+```
+
+One advantage of `vars()` is that it lets users specify their own names:
+
+```{r}
+grouped_mean3(starwars, vars(gender), vars(h = height, m = mass))
+```
+
+
+### `enquos(.named = TRUE)` - Automatically add default names
+
+If you pass `.named = TRUE` to `enquos()` the unnamed expressions are automatically given default names:
+
+```{r}
+f <- function(...) names(enquos(..., .named = TRUE))
+
+f(height, mean(mass))
+```
+
+User-supplied names are never overridden:
+
+```{r}
+f(height, m = mean(mass))
+```
+
+This is handy when you need to modify the names of quoted expressions. In this example we'll ensure the list is named before adding a prefix:
+
+```{r}
+grouped_mean2 <- function(.data, .summary_var, ...) {
+  summary_var <- enquo(.summary_var)
+  group_vars <- enquos(..., .named = TRUE)  # Ensure quoted dots are named
+
+  # Prefix the names of the list of quoted dots
+  names(group_vars) <- paste0("group_", names(group_vars))
+
+  .data %>%
+    group_by(!!!group_vars) %>%  # Unquote-splice the list
+    summarise(mean = mean(!!summary_var))
+}
+
+grouped_mean2(mtcars, disp, cyl, am)
+```
+
+One big downside of this technique is that all arguments get a prefix, including the arguments that were given specific names by the user:
+
+```{r}
+grouped_mean2(mtcars, disp, c = cyl, a = am)
+```
+
+In general it's better to preserve the names explicitly passed by the user. To do that we can't automatically add default names with `enquos()` because once the list is fully named we don't have any way of detecting which arguments were passed with an explicit names. We'll have to add default names manually with `quos_auto_name()`.
+
+
+### `quos_auto_name()` - Manually add default names
+
+It can be helpful add default names to the list of quoted dots manually:
+
+- We can detect which arguments were explicitly named by the user.
+- The default names can be applied to lists returned by `vars()`.
+
+Let's add default names manually with `quos_auto_name()` to lists of externally quoted variables. We'll detect unnamed arguments and only add a prefix to this subset of arguments. This way we preserve user-supplied names:
+
+```{r}
+grouped_mean3 <- function(data, group_vars, summary_vars) {
+  stopifnot(
+    is.list(group_vars),
+    is.list(summary_vars)
+  )
+
+  # Detect and prefix unnamed arguments:
+  unnamed <- names(summary_vars) == ""
+
+  # Add the default names:
+  summary_vars <- rlang::quos_auto_name(summary_vars)
+
+  prefixed_nms <- paste0("mean_", names(summary_vars)[unnamed])
+  names(summary_vars)[unnamed] <- prefixed_nms
+
+  # Expand the argument _after_ giving the list its default names
+  summary_vars <- purrr::map(summary_vars, function(var) {
+    expr(mean(!!var, na.rm = TRUE))
+  })
+
+  data %>%
+    group_by(!!!group_vars) %>%
+    summarise(n = n(), !!!summary_vars)  # Unquote-splice the renamed list
+}
+```
+
+Note how we add the default names *before* wrapping the arguments in a `mean()` call. This way we avoid including `mean()` in the name:
+
+```{r}
+quo_name(quote(mass))
+
+quo_name(quote(mean(mass, na.rm = TRUE)))
+```
+
+We get nicely prefixed default names:
+
+```{r}
+grouped_mean3(starwars, vars(gender), vars(height, mass))
+```
+
+And the user is able to fully override the names:
+
+```{r}
+grouped_mean3(starwars, vars(gender), vars(h = height, m = mass))
+```
+
+
+## `select()`
+
+TODO
+
+
+## `filter()`
+
+TODO
+
+
+## `case_when()`
+
+TODO
+
+
+## Gotchas
+
+### Nested quoting functions
+
+https://stackoverflow.com/questions/51902438/rlangsym-in-anonymous-functions

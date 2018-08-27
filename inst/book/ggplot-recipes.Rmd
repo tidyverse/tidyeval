@@ -1,0 +1,8 @@
+
+```{r setup, include = FALSE}
+source("setup.R")
+library("ggplot2")
+```
+
+# Recipes for ggplot2
+
