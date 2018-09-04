@@ -7,20 +7,20 @@ source("setup.R")
 
 # A rich toolbox
 
-## `quote()`, `expr()` and `enexpr()`
+## TODO `quote()`, `expr()` and `enexpr()`
 
 `case_when()` example?
 
 
-## `quo()` and `enquo()`
+## TODO `quo()` and `enquo()`
 
 
-## `vars()`, `quos()` and `enquos()`
+## TODO `vars()`, `quos()` and `enquos()`
 
 Is it confusing that `vars()` is an alias of `quos()`?
 
 
-## `qq_show()`
+## TODO `qq_show()`
 
 
-## `sym()` and `syms()`
+## TODO `sym()` and `syms()`
