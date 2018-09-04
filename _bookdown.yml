@@ -7,6 +7,7 @@ rmd_files:
     "introduction.Rmd",
     "dotdotdot.Rmd",
     "modify.Rmd",
+    "glossary.Rmd",
     "dplyr.Rmd",
     "ggplot.Rmd",
     "toolbox.Rmd",
