@@ -146,7 +146,7 @@ b <- 3
 identity(a * b)
 ```
 
-On the other hand, a quoting function is not passed the value of an expression, it is passed the *expression itself* as data. We call the process of converting an expression to data *quoting*. The quoted expression might be evaluated a bit later or might not be evaluated at all. The simplest quoting function is `quote()`. It automatically quotes its argument and returns the quoted expression as data.  Because only the expression passed as argument matters, none of these statements are equivalent:
+On the other hand, a quoting function is not passed the value of an expression, it is passed the *expression itself* as data. We call the process of converting an expression to data *quoting*. The quoted expression might be evaluated a bit later or might not be evaluated at all. The simplest quoting function is `quote()`. It automatically quotes its argument and returns the quoted expression as data.  Because it not the value of the expression but its representation as data that matters, none of these statements are equivalent:
 
 ```{r}
 quote(6)
