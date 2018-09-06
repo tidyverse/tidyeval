@@ -146,17 +146,28 @@ b <- 3
 identity(a * b)
 ```
 
-On the other hand, a quoting function is not passed the value of an expression, it is passed the *expression itself*. We say the argument has been automatically quoted. The quoted expression might be evaluated a bit later or might not be evaluated at all. The simplest quoting function is `quote()`. It automatically quotes its argument and returns the quoted expression without any evaluation.  Because only the expression passed as argument matters, none of these statements are equivalent:
+On the other hand, a quoting function is not passed the value of an expression, it is passed the *expression itself* as data. We call the process of converting an expression to data *quoting*. The quoted expression might be evaluated a bit later or might not be evaluated at all. The simplest quoting function is `quote()`. It automatically quotes its argument and returns the quoted expression as data.  Because it not the value of the expression but its representation as data that matters, none of these statements are equivalent:
 
 ```{r}
 quote(6)
 
+class(quote(6))
+
 quote(2 * 3)
 
+class(quote(2 * 3))
+
 quote(a * b)
+
+class(quote(a * b))
+
+var <- 6
+quote(var)
+
+class(quote(var))
 ```
 
-Other familiar quoting operators are `""` and `~`. The `""` operator quotes a piece of text at parsing time and returns a string. This prevents the text from being interpreted as some R code to evaluate. The tilde operator is similar to the `quote()` function in that it prevents R code from being automatically evaluated and returns a quoted expression in the form of a formula. The expression is then used to define a statistical model in modelling functions.  The three following expressions are doing something similar, they are quoting their input:
+Other familiar quoting operators are `""` and `~`. The `""` operator quotes a piece of text at parsing time and returns string data. This is how we delineate text data and text representing some R expressions to evaluate. The tilde operator is similar to the `quote()` function in that it prevents R code from being automatically evaluated and returns a quoted expression in the form of a formula. The expression is then used to define a statistical model in modelling functions.  The three following expressions are doing something similar, they are quoting their input:
 
 ```{r}
 "a * b"
