@@ -1,0 +1,165 @@
+
+```{r setup, include = FALSE}
+source("setup.R")
+library("dplyr")
+```
+
+# Glossary
+
+This glossary contains the vocabulary necessary to work with tidy evaluation and, more generally, with [expressions](#glossary-expr). The definitions in rlang are generally consistent with base R. When they differ, both definitions are presented so you can navigate between these two worlds more easily.
+
+
+## Data structures
+
+### TODO Data mask {#glossary-data-mask}
+
+### Expression {#glossary-expr}
+
+An expression is a piece of R code that represents a value or a computation:
+
+```{r, eval = FALSE}
+12            # Value
+12 / 3        # Computation
+12 / (1 + 2)  # Nested computations
+```
+
+Expressions are normally transient. They are computed (or [evaluated](#glossary-eval)) when you source a file or call a function. You can only observe:
+
+* The final value of the outermost expression.
+
+* Their side effects, such as the console output of a `print()` expression inside a loop.
+
+In R however, it is possible to suspend the normal evaluation of expressions with the [quotation](#glossary-quotation) mechanism. In a way, quotation causes expressions to freeze in place:
+
+```{r}
+# Evaluated expression
+12 / 3
+
+# Quoted expression
+expr(12 / 3)
+```
+
+The technical definition of expressions is any R object that is created by [parsing](#glossary-parse) R code:
+
+* [Constants](#glossary-constant-symbolic) like `NULL`, `1`, `"foo"`, `TRUE`, `NA`, etc.
+* [Symbols](#glossary-sym) like `height` or `weight`
+* [Calls](#glossary-call) like `c()` or `list()`
+
+Unlike constants, symbols and calls are [symbolic](#glossary-constant-symbolic) objects: their [value](#glossary-eval) depends on the [environment](#glossary-env).
+
+
+### Expression (base)
+
+In base R, "expression" refers to a special type of vector that contains quoted expressions in the rlang sense:
+
+```{r}
+base::expression(key <- "foo", toupper(key))
+```
+
+You'll most likely encounter this rare data structure as the return value of `base::parse()`:
+
+```{r}
+code <- "key <- 'foo'; toupper(key)"
+parse(text = code)
+```
+
+The only advantage of expression vectors compared to lists is that they include **source references**. Expression vectors with source references are printed with whitespace and comments preserved:
+
+```{r}
+code <- "{
+  # Interesting comment
+  weird     <-     whitespace
+}"
+parse(text = code, keep.source = TRUE)
+```
+
+Source references are mostly useful for debugging and development tools. They don't play any computational role and tidy evaluation doesn't make use of references. Consequently the parsing tools in rlang return normal lists of expressions (in the rlang sense) instead of expression vectors:
+
+```{r}
+rlang::parse_exprs(code)
+```
+
+
+### TODO Symbol {#glossary-sym}
+
+
+## Programming Concepts
+
+### Constant versus symbolic {#glossary-constant-symbolic}
+
+Constants, also called "literals", always have the same value no matter the context. On the other hand, symbols and calls are [symbolic](#glossary-constant-symbolic) expressions: their value depends on an [environment](#glossary-env) and what kind of objects are defined there.
+
+For instance the string `"mickey"` always represents the same string no matter the environment and what objects are defined there:
+
+```{r}
+# Here's a string:
+"mickey"
+
+mickey <- "mouse"
+
+# Still the same string:
+"mickey"
+```
+
+In constrast, [symbols](#glossary-sym) depend on current definitions:
+
+```{r}
+# We've defined `mickey` as "mouse"
+mickey
+
+mickey <- "mickey"
+
+# Now `mickey` is "mickey"
+mickey
+```
+
+One source of problems when you're working with quoted expressions is that they might be evaluated in arbitrary places, where objects have potentially been redefined to something different than expected. This is a common issue with tidyverse grammars because they evaluate quoted expressions in a [data mask](#glossary-data-mask). Say you'd like to divide a column by a factor defined in the current environment:
+
+```{r}
+factor <- 100
+
+starwars %>% mutate(height / factor) %>% pull()
+```
+
+This works fine but what if the data frame contains a column called `factor`? The expression will be evaluated with the parasite definition:
+
+```{r}
+# Derive a data frame that contains a `factor` column
+starwars2 <- starwars %>% mutate(factor = 1:n())
+
+# Oh no! We're now dividing `height` by the new column!
+starwars2 %>% mutate(height / factor) %>% pull()
+```
+
+Masking is generally not a problem in scripts because you know what columns are inside your data frame. However as soon as your code is getting more general, for instance if you create a reusable function, you can no longer make assumptions about what's in the data.
+
+Fortunately with [quasiquotation](#glossary-qq) it is easy to solve masking issues by replacing symbols with constants. The unquoting operator `!!` allows you to inline constant values deep inside expressions. With [`qq_show()`](#toolbox-qq-show) we can observe the inlining:
+
+```{r}
+vector <- 1:3
+
+# Without inlining, the expression depends on the value of `vector`:
+rlang::qq_show(list(vector))
+
+# Let's inline the current value of `vector` by unquoting it:
+rlang::qq_show(list(!!vector))
+```
+
+Because constants have the same value in any environment, the data mask can never take over with parasite definitions:
+
+```{r}
+rlang::qq_show(starwars2 %>% mutate(height / !!factor) %>% pull())
+
+starwars2 %>% mutate(height / !!factor) %>% pull()
+```
+
+
+### TODO Non-Standard Evaluation (NSE) {#glossary-nse}
+
+### TODO Quotation versus Evaluation {#glossary-quotation-evaluation}
+
+### TODO Quasiquotation {#glossary-qq}
+
+### TODO Parsing {#glossary-parse}
+
+### TODO Metaprogramming {#glossary-metaprogramming}

@@ -20,7 +20,7 @@ source("setup.R")
 Is it confusing that `vars()` is an alias of `quos()`?
 
 
-## TODO `qq_show()`
+## TODO `qq_show()` {#toolbox-qq-show}
 
 
 ## TODO `sym()` and `syms()`
