@@ -6,7 +6,7 @@ library("dplyr")
 
 # Glossary
 
-This glossary contains all the vocabulary necessary to work with tidy evaluation and, more generally, with [expressions](#glossary-expr). The definitions in rlang are generally consistent with base R. When they differ, both definitions are presented so you can navigate between these two worlds more easily.
+This glossary contains the vocabulary necessary to work with tidy evaluation and, more generally, with [expressions](#glossary-expr). The definitions in rlang are generally consistent with base R. When they differ, both definitions are presented so you can navigate between these two worlds more easily.
 
 
 ## Data structures
@@ -15,19 +15,21 @@ This glossary contains all the vocabulary necessary to work with tidy evaluation
 
 ### Expression {#glossary-expr}
 
-An expression is a piece of R code that describes a value:
+An expression is a piece of R code that represents a value or a computation:
 
-```{r}
-12
+```{r, eval = FALSE}
+12            # Value
+12 / 3        # Computation
+12 / (1 + 2)  # Nested computations
 ```
 
-or a computation:
+Expressions are normally transient. They are computed (or [evaluated](#glossary-eval)) when you source a file or call a function. You can only observe:
 
-```{r}
-12 / 3
-```
+* The final value of the outermost expression.
 
-Expressions are normally transient. They are executed ([evaluated](#glossary-eval)) when you source a file or call a function and you only see their final value or their side effects (such as console output). However in R you can suspend the normal evaluation of expressions with the [quotation](#glossary-quotation) mechanism:
+* Their side effects, such as the console output of a `print()` expression inside a loop.
+
+In R however, it is possible to suspend the normal evaluation of expressions with the [quotation](#glossary-quotation) mechanism. In a way, quotation causes expressions to freeze in place:
 
 ```{r}
 # Evaluated expression
@@ -48,7 +50,7 @@ Unlike constants, symbols and calls are [symbolic](#glossary-constant-symbolic) 
 
 ### Expression (base)
 
-In base R, "expression" refers to a special type of vectors that contains quoted expressions in the rlang sense:
+In base R, "expression" refers to a special type of vector that contains quoted expressions in the rlang sense:
 
 ```{r}
 base::expression(key <- "foo", toupper(key))
@@ -61,7 +63,7 @@ code <- "key <- 'foo'; toupper(key)"
 parse(text = code)
 ```
 
-The only advantage of expression vectors compared to lists is that they include **source references**. The most apparent manifestation of source references is that expression vectors are printed with whitespace and comments preserved:
+The only advantage of expression vectors compared to lists is that they include **source references**. Expression vectors with source references are printed with whitespace and comments preserved:
 
 ```{r}
 code <- "{
@@ -85,7 +87,7 @@ rlang::parse_exprs(code)
 
 ### Constant versus symbolic {#glossary-constant-symbolic}
 
-Constants, also called "literals", always have the same value no matter the context. On the other hand symbols and calls are [symbolic](#glossary-constant-symbolic) objects: their value depends on an [environment](#glossary-env) and what kind of objects are defined there.
+Constants, also called "literals", always have the same value no matter the context. On the other hand, symbols and calls are [symbolic](#glossary-constant-symbolic) expressions: their value depends on an [environment](#glossary-env) and what kind of objects are defined there.
 
 For instance the string `"mickey"` always represents the same string no matter the environment and what objects are defined there:
 
@@ -99,7 +101,7 @@ mickey <- "mouse"
 "mickey"
 ```
 
-On the other [symbols](#glossary-sym) depend on current definitions:
+In constrast, [symbols](#glossary-sym) depend on current definitions:
 
 ```{r}
 # We've defined `mickey` as "mouse"
@@ -111,7 +113,7 @@ mickey <- "mickey"
 mickey
 ```
 
-One source of problem when you're working with quoted expressions is that they might be evaluated in arbitrary places, where objects have potentially been redefined to something completely different than expected. This is a common issue with tidyverse grammars because they evaluate quoted expressions in a [data mask](#glossary-data-mask). Say you'd like to divide a column by a factor defined in the current environment:
+One source of problems when you're working with quoted expressions is that they might be evaluated in arbitrary places, where objects have potentially been redefined to something different than expected. This is a common issue with tidyverse grammars because they evaluate quoted expressions in a [data mask](#glossary-data-mask). Say you'd like to divide a column by a factor defined in the current environment:
 
 ```{r}
 factor <- 100
@@ -119,7 +121,7 @@ factor <- 100
 starwars %>% mutate(height / factor) %>% pull()
 ```
 
-This works fine but what if the data frame contains a column called `factor`? The expression will be evaluated with the wrong definition:
+This works fine but what if the data frame contains a column called `factor`? The expression will be evaluated with the parasite definition:
 
 ```{r}
 # Derive a data frame that contains a `factor` column
