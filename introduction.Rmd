@@ -301,7 +301,7 @@ There is no general unquoting convention in base R so you have to read the docum
 
 #### Unquoting in the tidyverse!!
 
-All quoting functions in the tidyverse support a single unquotation mechanism, the `!!` operator (pronounced **bang-bang**). You can use `!!` to cancel the automatic quotation and supply indirect references everywhere an argument is automatically quoted.
+All quoting functions in the tidyverse support a single unquotation mechanism, the `!!` operator (pronounced **bang-bang**). You can use `!!` to cancel the automatic quotation and supply indirect references everywhere an argument is automatically quoted. In other words, unquoting lets you open a variable and use what's inside instead.
 
 First let's create a couple of variables that hold references to columns from the `mtcars` data frame. A simple way of creating these references is to use the fundamental quoting function `quote()`:
 
@@ -315,7 +315,7 @@ x_var
 y_var
 ```
 
-Here are a few examples of how `!!` is used throughout the tidyverse to unquote such references.
+Here are a few examples of how `!!` can be used in tidyverse functions to unquote these variables, i.e. open them and use their contents.
 
 *   In dplyr most verbs quote their arguments:
 
@@ -323,8 +323,8 @@ Here are a few examples of how `!!` is used throughout the tidyverse to unquote 
     library("dplyr")
 
     by_cyl <- mtcars %>%
-      group_by(!!x_var) %>%            # Refer to x_var
-      summarise(mean = mean(!!y_var))  # Refer to y_var
+      group_by(!!x_var) %>%            # Open x_var
+      summarise(mean = mean(!!y_var))  # Open y_var
     ```
 
 *   In ggplot2 `aes()` is the main quoting function:
@@ -332,7 +332,7 @@ Here are a few examples of how `!!` is used throughout the tidyverse to unquote 
     ```{r}
     library("ggplot2")
 
-    ggplot(mtcars, aes(!!x_var, !!y_var)) +  # Refer to x_var and y_var
+    ggplot(mtcars, aes(!!x_var, !!y_var)) +  # Open x_var and y_var
       geom_point()
     ```
 
@@ -341,10 +341,10 @@ Here are a few examples of how `!!` is used throughout the tidyverse to unquote 
     ```{r}
     ggplot(mtcars, aes(disp, drat)) +
       geom_point() +
-      facet_grid(vars(!!x_var))  # Refer to x_var
+      facet_grid(vars(!!x_var))  # Open x_var
     ```
 
-Indirect references in quoting functions are rarely useful in scripts but they are invaluable for writing functions. With `!!` we can now easily fix our wrapper function. as we'll see in the following section.
+Being able to make indirect references by opening variables with `!!` is rarely useful in scripts but is invaluable for writing functions. With `!!` we can now easily fix our wrapper function. as we'll see in the following section.
 
 
 ### Understanding `!!` with `qq_show()`
