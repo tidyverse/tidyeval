@@ -6,9 +6,33 @@ source("setup.R")
 library("dplyr")
 ```
 
-# Getting up to speed
 
-Tidyverse grammars such as dplyr were originally designed for interactive use and analysis scripts. Part of it is that these grammars attempt to model how data analysts think about data problems. Another reason is that they make your data first class and let you refer to data frame columns as if they were distinct objects. While it contributes to make dplyr code look concise and to the point, this last aspect unfortunately has a dark side. It makes it harder to reduce duplication by wrapping tidyverse code in functions and loops. Writing functions around dplyr pipelines and other tidyeval APIs requires a bit of special knowledge because these APIs use a special type of functions called **quoting functions** in order to make data first class.
+# Introduction
+
+Tidyverse grammars like dplyr have a distinctive look and feel. This is in part because their design follows a set of [principles](https://principles.tidyverse.org/). However, their most important feature is that they let you work with your data as if they were actual objects in your workspace. In a way, the data frame temporarily becomes the workspace. When the contents of the data frame are temporarily promoted as objects in the workspace, we say the data **masks** the workspace:
+
+```{r, eval = FALSE}
+# Masking data
+starwars %>%
+  filter(
+    height < 200,
+    gender == "male"
+  )
+
+# Qualified data
+starwars[starwars$height < 200 & starwars$gender == "male", ]
+```
+
+Data masking makes it easy and natural to read and write data manipulation code, but it has a flip side. It is easier to refer to objects in the mask when you know their names in advance, but it is harder when the names are unknown at the time of writing. In particular, it is harder to refer to columns whose names are stored in variables or passed as function arguments.
+
+Tidy evaluation is a set of concepts and tools that make it possible to use tidyverse grammars when column names vary. In particular, you will need to learn some tidy eval to extract a tidyverse pipeline in a reusable function.
+
+In the first chapter, you will get up to speed with tidy eval by learning the basic workflow of wrapping a tidyverse pipeline in a reusable function.
+
+
+# Getting up to speed {#up-to-speed}
+
+While tidyverse grammars are easy to write in scripts and at the console, they make it a bit harder to reduce code duplication. Writing functions around dplyr pipelines and other tidyeval APIs requires a bit of special knowledge because these APIs use a special type of functions called **quoting functions** in order to make data first class.
 
 If one-off code is often reasonable for common data analysis tasks, it is good practice to write reusable functions to reduce code duplication. In this vignette you will learn about quoting functions, what challenges they pose for programming, and the solutions that **tidy evaluation** provides to solve those problems.
 
