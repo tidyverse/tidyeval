@@ -3,6 +3,7 @@
 
 ```{r setup, include = FALSE}
 source("setup.R")
+library(dplyr)
 ```
 
 
