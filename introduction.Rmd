@@ -34,7 +34,7 @@ In the first chapter, you will get up to speed with tidy eval by learning the ba
 
 While tidyverse grammars are easy to write in scripts and at the console, they make it a bit harder to reduce code duplication. Writing functions around dplyr pipelines and other tidyeval APIs requires a bit of special knowledge because these APIs use a special type of functions called **quoting functions** in order to make data first class.
 
-If one-off code is often reasonable for common data analysis tasks, it is good practice to write reusable functions to reduce code duplication. In this vignette you will learn about quoting functions, what challenges they pose for programming, and the solutions that **tidy evaluation** provides to solve those problems.
+If one-off code is often reasonable for common data analysis tasks, it is good practice to write reusable functions to reduce code duplication. In this introduction, you will learn about quoting functions, what challenges they pose for programming, and the solutions that **tidy evaluation** provides to solve those problems.
 
 
 ## Writing functions
@@ -43,7 +43,7 @@ If one-off code is often reasonable for common data analysis tasks, it is good p
 
 Writing functions is essential for the clarity and robustness of your code. Functions have several advantages:
 
-1. They prevents inconsistencies because it enforces multiple computations to follow a single recipe.
+1. They prevent inconsistencies because they force multiple computations to follow a single recipe.
 
 1. They emphasise what varies (the arguments) and what is constant (every other component of the computation).
 
@@ -51,7 +51,7 @@ Writing functions is essential for the clarity and robustness of your code. Func
 
 1. They make your code clearer if you give the function and its arguments informative names.
 
-The process for creating a function is straightforward. First recognise duplication in your code. A good rule of thumb is to create a function when you have copy-pasted a piece of code three times. Can you spot the copy-paste mistake in this code duplication?
+The process for creating a function is straightforward. First, recognise duplication in your code. A good rule of thumb is to create a function when you have copy-pasted a piece of code three times. Can you spot the copy-paste mistake in this duplicated code?
 
 ```{r, eval = FALSE}
 (df$a - min(df$a)) / (max(df$a) - min(df$a))
@@ -60,7 +60,7 @@ The process for creating a function is straightforward. First recognise duplicat
 (df$d - min(df$d)) / (max(df$d) - min(df$c))
 ```
 
-Now identify the variying parts of the expression and give them a name. `x` is an easy choice but it is often a good idea to reflect the type of argument expected in the name. In our case we expect a numeric vector:
+Now identify the varying parts of the expression and give each a name. `x` is an easy choice, but it is often a good idea to reflect the type of argument expected in the name. In our case we expect a numeric vector:
 
 ```{r, eval = FALSE}
 (num - min(num)) / (max(num) - min(num))
@@ -103,7 +103,13 @@ rescale01(df$c)
 rescale01(df$d)
 ```
 
-Reducing code duplication is as much needed with tidyverse grammars as with ordinary computations. Unfortunately, the straighforward process to create functions breaks down with grammars like dplyr. To see why, let's try to reproduce the process with a duplicated pipeline:
+Reducing code duplication is as much needed with tidyverse grammars as with ordinary computations. Unfortunately, the straighforward process to create functions breaks down with grammars like dplyr, which we attach now.
+
+```{r}
+library(dplyr)
+```
+
+To see the problem, let's use the same function-writing process with a duplicated dplyr pipeline:
 
 ```{r, eval = FALSE}
 df1 %>% group_by(x1) %>% summarise(mean = mean(y1))
@@ -151,7 +157,7 @@ grouped_mean <- function(data, group_var, summary_var) {
 grouped_mean(mtcars, cyl, mpg)
 ```
 
-To understand how that works, we need to learn about quoting functions and what special steps are needed to be effective at programming with them. Really we only need two new concepts forming together a single pattern: quoting and unquoting. This vignette will get you up to speed with this pattern.
+To understand how that works, we need to learn about quoting functions and what special steps are needed to be effective at programming with them. Really we only need two new concepts forming together a single pattern: quoting and unquoting. This intoduction will get you up to speed with this pattern.
 
 
 ### What's special about quoting functions?
@@ -185,7 +191,7 @@ Other familiar quoting operators are `""` and `~`. The `""` operator quotes a pi
 ```{r}
 "a * b"
 
-~a * b
+~ a * b
 
 quote(a * b)
 ```
@@ -254,7 +260,7 @@ rm(mtcars2)
 
 A good indication that an argument is auto-quoted and evaluated in a special way is that the argument will not work correctly outside of its original context. Let's try to break down each of these expressions in two steps by storing the arguments in an intermediary variable:
 
-1.
+1. `library(MASS)`
     ```{r, error = TRUE}
     temp <- MASS
 
@@ -264,14 +270,14 @@ A good indication that an argument is auto-quoted and evaluated in a special way
 
     We get these errors because there is no `MASS` object for R to find, and `temp` is interpreted by `library()` directly as a package name rather than as an indirect reference. Let's try to break down the `subset()` expression:
 
-2.
+2. `mtcars2 <- subset(mtcars, cyl == 4)`
     ```{r, error = TRUE}
     temp <- cyl == 4
     ```
 
     R cannot find `cyl` because we haven't specified where to find it. This object exists only inside the `mtcars` data frame.
 
-3.
+3. `sum(mtcars2$am)`
     ```{r, error = TRUE}
     temp <- mtcars$am
     sum(temp)
@@ -279,7 +285,7 @@ A good indication that an argument is auto-quoted and evaluated in a special way
 
     It worked! `sum()` is an evaluating function and the indirect reference was resolved in the ordinary way.
 
-4.
+4. `rm(mtcars2)`
     ```{r, error = TRUE}
     mtcars2 <- mtcars
     temp <- "mtcars2"
@@ -294,7 +300,7 @@ A good indication that an argument is auto-quoted and evaluated in a special way
 
 ### Unquotation
 
-In practice, functions that evaluate their arguments are easier to program with because they support both direct and indirect references. For quoting functions, a piece of syntax is missing. We need the ability of **unquoting** arguments.
+In practice, functions that evaluate their arguments are easier to program with because they support both direct and indirect references. For quoting functions, a piece of syntax is missing. We need the ability to **unquote** arguments.
 
 
 #### Unquoting in base R
@@ -368,12 +374,12 @@ Here are a few examples of how `!!` can be used in tidyverse functions to unquot
       facet_grid(vars(!!x_var))  # Open x_var
     ```
 
-Being able to make indirect references by opening variables with `!!` is rarely useful in scripts but is invaluable for writing functions. With `!!` we can now easily fix our wrapper function. as we'll see in the following section.
+Being able to make indirect references by opening variables with `!!` is rarely useful in scripts but is invaluable for writing functions. With `!!` we can now easily fix our wrapper function, as we'll see in the following section.
 
 
 ### Understanding `!!` with `qq_show()`
 
-At this point it is normal if the concept of unquoting still feels nebulous. A good way of practicing this operation is to see for yourself what it is really doing. To that end  the `qq_show()` function from the rlang package performs unquoting and prints the result at the screen. Here is what `!!` is really doing in the dplyr example (I've broken up the pipeline in two steps for readability):
+At this point it is normal if the concept of unquoting still feels nebulous. A good way of practicing this operation is to see for yourself what it is really doing. To that end  the `qq_show()` function from the rlang package performs unquoting and prints the result to the screen. Here is what `!!` is really doing in the dplyr example (I've broken the pipeline into two steps for readability):
 
 ```{r}
 rlang::qq_show(mtcars %>% group_by(!!x_var))
@@ -442,7 +448,7 @@ data %>%
 
 ### Result
 
-The finalised function looks like this:
+The finished function looks like this:
 
 ```{r}
 grouped_mean <- function(data, group_var, summary_var) {
