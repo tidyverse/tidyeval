@@ -106,7 +106,7 @@ rescale01(df$d)
 Reducing code duplication is as much needed with tidyverse grammars as with ordinary computations. Unfortunately, the straighforward process to create functions breaks down with grammars like dplyr, which we attach now.
 
 ```{r}
-library(dplyr)
+library("dplyr")
 ```
 
 To see the problem, let's use the same function-writing process with a duplicated dplyr pipeline:
