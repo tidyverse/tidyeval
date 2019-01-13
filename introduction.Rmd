@@ -3,7 +3,7 @@
 
 ```{r setup, include = FALSE}
 source("setup.R")
-library(dplyr)
+library("dplyr")
 ```
 
 
@@ -12,7 +12,7 @@ library(dplyr)
 Tidyverse grammars like dplyr have a distinctive look and feel. This is in part because their design follows a set of [principles](https://principles.tidyverse.org/). However, their most important feature is that they let you work with your data as if they were actual objects in your workspace. In a way, the data frame temporarily becomes the workspace. When the contents of the data frame are temporarily promoted as objects in the workspace, we say the data **masks** the workspace:
 
 ```{r, eval = FALSE}
-library(dplyr)
+library("dplyr")
 
 # Masking data
 starwars %>%
@@ -108,7 +108,7 @@ rescale01(df$d)
 Reducing code duplication is as much needed with tidyverse grammars as with ordinary computations. Unfortunately, the straighforward process to create functions breaks down with grammars like dplyr, which we attach now.
 
 ```{r}
-library(dplyr)
+library("dplyr")
 ```
 
 To see the problem, let's use the same function-writing process with a duplicated dplyr pipeline:
