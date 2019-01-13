@@ -103,7 +103,7 @@ rescale01(df$c)
 rescale01(df$d)
 ```
 
-Reducing code duplication is as much needed with tidyverse grammars as with ordinary computations. Unfortunately, the straighforward process to create functions breaks down with grammars like dplyr, which we attach now.
+Reducing code duplication is as much needed with tidyverse grammars as with ordinary computations. Unfortunately, the straightforward process to create functions breaks down with grammars like dplyr, which we attach now.
 
 ```{r}
 library("dplyr")
@@ -118,7 +118,7 @@ df3 %>% group_by(x3) %>% summarise(mean = mean(y3))
 df4 %>% group_by(x4) %>% summarise(mean = mean(y4))
 ```
 
-We first abtract out the varying parts by giving them informative names:
+We first abstract out the varying parts by giving them informative names:
 
 ```{r, eval = FALSE}
 data %>% group_by(group_var) %>% summarise(mean = mean(summary_var))
@@ -157,7 +157,7 @@ grouped_mean <- function(data, group_var, summary_var) {
 grouped_mean(mtcars, cyl, mpg)
 ```
 
-To understand how that works, we need to learn about quoting functions and what special steps are needed to be effective at programming with them. Really we only need two new concepts forming together a single pattern: quoting and unquoting. This intoduction will get you up to speed with this pattern.
+To understand how that works, we need to learn about quoting functions and what special steps are needed to be effective at programming with them. Really we only need two new concepts forming together a single pattern: quoting and unquoting. This introduction will get you up to speed with this pattern.
 
 
 ### What's special about quoting functions?
