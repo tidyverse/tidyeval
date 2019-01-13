@@ -25,7 +25,7 @@ starwars[starwars$height < 200 & starwars$gender == "male", ]
 
 Data masking makes it easy and natural to read and write data manipulation code, but it has a flip side. It is easier to refer to objects in the mask when you know their names in advance, but it is harder when the names are unknown at the time of writing. In particular, it is harder to refer to columns whose names are stored in variables or passed as function arguments.
 
-Tidy evaluation is a set of concepts and tools that make it possible to use tidyverse grammars when column names vary. In particular, you will need to learn some tidy eval to extract a tidyverse pipeline in a reusable function.
+Tidy evaluation is a set of concepts and tools that make it possible to use tidyverse grammars when columns are specified indirectly. In particular, you will need to learn some tidy eval to extract a tidyverse pipeline in a reusable function.
 
 In the first chapter, you will get up to speed with tidy eval by learning the basic workflow of wrapping a tidyverse pipeline in a reusable function.
 
