@@ -105,7 +105,13 @@ rescale01(df$c)
 rescale01(df$d)
 ```
 
-Reducing code duplication is as much needed with tidyverse grammars as with ordinary computations. Unfortunately, the straighforward process to create functions breaks down with grammars like dplyr. To see why, let's try to reproduce the process with a duplicated pipeline:
+Reducing code duplication is as much needed with tidyverse grammars as with ordinary computations. Unfortunately, the straighforward process to create functions breaks down with grammars like dplyr, which we attach now.
+
+```{r}
+library(dplyr)
+```
+
+To see the problem, let's use the same function-writing process with a duplicated dplyr pipeline:
 
 ```{r, eval = FALSE}
 df1 %>% group_by(x1) %>% summarise(mean = mean(y1))
