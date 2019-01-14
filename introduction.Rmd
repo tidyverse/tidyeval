@@ -12,6 +12,8 @@ library("dplyr")
 Tidyverse grammars like dplyr have a distinctive look and feel. This is in part because their design follows a set of [principles](https://principles.tidyverse.org/). However, their most important feature is that they let you work with your data as if they were actual objects in your workspace. In a way, the data frame temporarily becomes the workspace. When the contents of the data frame are temporarily promoted as objects in the workspace, we say the data **masks** the workspace:
 
 ```{r, eval = FALSE}
+library("dplyr")
+
 # Masking data
 starwars %>%
   filter(
