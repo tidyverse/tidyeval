@@ -9,27 +9,185 @@ library("dplyr")
 
 # Introduction
 
-Tidyverse grammars like dplyr have a distinctive look and feel. This is in part because their design follows a set of [principles](https://principles.tidyverse.org/). However, their most important feature is that they let you work with your data as if they were actual objects in your workspace. In a way, the data frame temporarily becomes the workspace. When the contents of the data frame are temporarily promoted as objects in the workspace, we say the data **masks** the workspace:
+Tidyverse grammars like dplyr have a distinctive look and feel. This is in part because their design follows a set of [principles](https://principles.tidyverse.org/). Their most important feature is that they let you work with your data as if they were actual objects in your workspace. In a way, the data frame temporarily becomes the workspace.
+
+Data masking makes it easy and natural to read and write data manipulation code, but it has a flip side. It is easier to refer to objects in the mask when you know their names in advance, but it is harder when the names are unknown at the time of writing. In particular, it is harder to make _indirect references_ with column names stored in variables or passed as function arguments.
+
+Tidy evaluation is a set of concepts and tools that make it possible to use tidyverse grammars when columns are specified indirectly. In particular, you will need to learn some tidy eval to extract a tidyverse pipeline in a reusable function.
+
+The first chapter [Why and how](#why-how) provides the motivation for tidy eval, presents the problems that it poses in day-to-day programming, and the general theory and tools for solving those. If you are in a hurry, you can jump straight to [Do you need tidy eval?](do-you-need). A lot can be done without writing a single line of tidy eval! If you are positive you need it to solve your problem, [Getting up to speed](#up-to-speed) is a self-contained chapter that will teach you the basic workflow of wrapping a tidyverse pipeline in a reusable function. The book ends with a series of recipes and idioms for solving various dplyr and ggplot2 problems.
+
+
+# Why and how {#why-how}
+
+Tidy evaluation is a framework for metaprogramming in R, used throughout the tidyverse to implement data masking. Metaprogramming is about using a programming language to manipulate or modify its own code. This idea is used throughout the tidyverse to change the context of computation of certain pieces of R code.
+
+Changing the context of evaluation is useful for three main purposes:
+
+* To promote data frames to **full blown scopes**, where columns are exposed as named objects.
+
+* To execute your R code in a **foreign environment**. For instance, dbplyr translates ordinary dplyr pipelines to SQL queries.
+
+* To implement **special rules** for ordinary R operators. For instance, selection functions such as `dplyr::select()` or `tidyr::gather()` implement specific behaviours for `c()`, `:` and `-`.
+
+
+## Data masking
+
+Of these goals, the promotion of data frames is the most important because data is often the most relevant context for data analysts. We believe that R and the tidyverse are [human-centered](https://principles.tidyverse.org/unifying-principles.html#human-centered) in big part because the data frame is available for direct use in computations, without syntax and boilerplate getting in the way. Formulas for statistical models are a prime example of human-centered syntax in R. Data masking and special operator rules make formulas an intuitive interface for model specification.
+
+When the contents of the data frame are temporarily promoted as first class objects, we say the data **masks** the workspace:
 
 ```{r, eval = FALSE}
 library("dplyr")
 
-# Masking data
-starwars %>%
-  filter(
-    height < 200,
-    gender == "male"
-  )
-
-# Qualified data
-starwars[starwars$height < 200 & starwars$gender == "male", ]
+starwars %>% filter(
+  height < 200,
+  gender == "male"
+)
 ```
 
-Data masking makes it easy and natural to read and write data manipulation code, but it has a flip side. It is easier to refer to objects in the mask when you know their names in advance, but it is harder when the names are unknown at the time of writing. In particular, it is harder to refer to columns whose names are stored in variables or passed as function arguments.
+Compare to the equivalent subsetting code where it is necessary to be explicit about where the columns come from:
 
-Tidy evaluation is a set of concepts and tools that make it possible to use tidyverse grammars when columns are specified indirectly. In particular, you will need to learn some tidy eval to extract a tidyverse pipeline in a reusable function.
+```{r, eval = FALSE}
+index <-
+  !is.na(starwars$height) & !is.na(starwars$gender) &
+  starwars$height < 200 & starwars$gender == "male"
 
-In the first chapter, you will get up to speed with tidy eval by learning the basic workflow of wrapping a tidyverse pipeline in a reusable function.
+starwars[index, ]
+```
+
+Data masking is natural for many users because it reduces boilerplate and results in code that maps more directly to how they think about data manipulation problems. This is why many R beginners are tempted to use `attach()`. This function attaches a data frame to the search path in much the same way that `library()` attaches exported objects of a package to make it easier to use interactively. However `attach()` is not a recommended way of using a data mask for the same reason that global options are frown on — it makes your code less reproducible because of the permanent scope of these effects. On the other hand, data masking functions have only temporary effects, making them a good choice for both interactive and programmatic uses.
+
+Data masking is only possible because R allows suspending the normal flow of evaluation. If code was evaluated in the normal way, R would not be able to find the relevant columns for the computation:
+
+```{r, error = TRUE}
+list(
+  height < 200,
+  gender == "male"
+)
+```
+
+
+## Quoting code
+
+In order to change the context, evaluation must be suspended and then resumed in a different environment. The technical term for delaying code in this way is **quoting**. Tidyverse grammars quote the code supplied by users as arguments. They don't get results of code but the quoted code itself, whose evaluation can be resumed later on in a data context. In a way, quoted code is like a blueprint for R computations. One important quoting functions in dplyr is `vars()`. This function does nothing but return its arguments as blueprints to be interpreted later on by verbs like `summarise_at()`:
+
+```{r}
+starwars %>% summarise_at(vars(ends_with("color")), n_distinct)
+```
+
+If you call `vars()` alone, you get to see the blueprints! [^3]
+
+[^3]: As you can see, blueprints are also called **quosures**. These are special types of [expressions](#glossary-expr) that keep track of the current context, or [environment](#glossary-env).
+
+```{r}
+vars(
+  ends_with("color"),
+  height:mass
+)
+```
+
+The evaluation of an expression captured as a blueprint can be resumed at any time, possibly in a different context:
+
+```{r, error = TRUE}
+exprs <- vars(height / 100, mass + 50)
+
+rlang::eval_tidy(exprs[[1]])
+
+rlang::eval_tidy(exprs[[1]], data = starwars)
+```
+
+To sum up, the distinctive look and feel of data masking UIs requires suspending the normal evaluation of R code. Once captured as quoted code, it can be resumed in a different context. Unfortunately, the delaying of code has a dark side. While it is straightforward to substitute values, it is harder to substitute column names in delayed code. Making indirect references to columns requires learning a bit of new theory and some new tools.
+
+
+## Unquoting code
+
+Data masking functions prevent the normal evaluation of their arguments by quoting them. Once in possession of the blueprints of their arguments, they create a data mask and resume evaluation in this new context. The flip side of delaying code in this way is that making indirect references to columns is only possible by modifying the quoted code before it gets evaluated. We need a surgery operator for blueprints of R code. This is what the `!!` operator[^4] is all about.
+
+[^4]: Pronounced bang bang.
+
+In the world of normal functions, making indirect references is easy. Expressions that yield the same values can be freely interchanged, a property that is sometimes called [referential transparency](https://en.wikipedia.org/wiki/Referential_transparency):
+
+```{r}
+my_function <- function(x) x * 100
+
+my_function(6)
+
+my_function(2 * 3)
+
+a <- 2
+b <- 3
+my_function(a * b)
+```
+
+Because data masking functions evaluate their quoted arguments in a different context, they do not have this property:
+
+```{r, error = TRUE}
+starwars %>% summarise(avg = mean(height, na.rm = TRUE))
+
+value <- mean(height, na.rm = TRUE)
+starwars %>% summarise(avg = value)
+```
+
+Storing a column name in a variable or passing one as function argument requires the tidy eval operator `!!`. This special operator, only available in quoting functions, acts like a surgical operator for modifying blueprints. To understand what it does, it is best to see it in action. The `qq_show()` helper from rlang processes `!!` and prints the resulting blueprint for a computation:
+
+```{r}
+x <- 1
+
+rlang::qq_show(
+  starwars %>% summarise(out = x)
+)
+
+rlang::qq_show(
+  starwars %>% summarise(out = !!x)
+)
+```
+
+As you can observe, `!!` modifies the quoted code by inlining the value of its operand right into the blueprint. What would it take to create an indirect reference to a column name? Passing its name as a string will not produce what you expect:
+
+```{r}
+col <- "height"
+
+rlang::qq_show(
+  starwars %>% summarise(out = sum(!!col, na.rm = TRUE))
+)
+```
+
+This code amounts to taking the mean of a string, something that R will not be happy about:
+
+```{r, error = TRUE}
+starwars %>% summarise(out = sum(!!col, na.rm = TRUE))
+```
+
+To refer to column names inside a blueprint, we need to inline blueprint material. We need **symbols**:
+
+```{r}
+sym(col)
+```
+
+Symbols are a special type of string that represent other objects. When a piece of R code is evaluated, every bare variable name is actually a symbol that represent some value as defined in the current context. Let's see what the modified blueprint looks like when we inline a symbol:
+
+```{r}
+rlang::qq_show(
+  starwars %>% summarise(out = sum(!!sym(col), na.rm = TRUE))
+)
+```
+
+Looks good! We're now ready to actually run the dplyr pipeline with an indirect reference:
+
+```{r}
+starwars %>% summarise(out = sum(!!sym(col), na.rm = TRUE))
+```
+
+
+# Do you need tidy eval {#do-you-need}
+
+TODO
+
+* Using `.data[[`.
+* Scoped variants.
+* Passing dots.
+* Iterating over list columns
 
 
 # Getting up to speed {#up-to-speed}
