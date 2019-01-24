@@ -2,9 +2,11 @@ bookdown::gitbook:
   includes:
     in_header: [ga_script.html]
   config:
+    sharing:
+      github: yes
     toc:
       collapse: section
       before: |
         <li><strong><a href="./">Tidy evaluation</a></strong></li>
-    sharing: no
+    edit: https://github.com/tidyverse/tidyeval/edit/master/%s
   css: adv-r.css
