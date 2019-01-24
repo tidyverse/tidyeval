@@ -22,14 +22,17 @@ The first chapter [Why and how](#why-how) provides the motivation for tidy eval,
 
 Tidy evaluation is a framework for metaprogramming in R, used throughout the tidyverse to implement data masking. Metaprogramming is about using a programming language to manipulate or modify its own code. This idea is used throughout the tidyverse to change the context of computation of certain pieces of R code.
 
-Changing the context of evaluation is useful for three main purposes:
+Changing the context of evaluation is useful for four main purposes:
 
 * To promote data frames to **full blown scopes**, where columns are exposed as named objects.
 
 * To execute your R code in a **foreign environment**. For instance, dbplyr translates ordinary dplyr pipelines to SQL queries.
 
+* To execute your R code with a more performant **compiled language**. For instance, the dplyr package uses C++ implementations for a certain set of mathematical expressions to avoid executing slower R code when possible[^perf].
+
 * To implement **special rules** for ordinary R operators. For instance, selection functions such as `dplyr::select()` or `tidyr::gather()` implement specific behaviours for `c()`, `:` and `-`.
 
+[^perf]: The data.table package uses different metaprogramming tools than tidy eval for the same purpose. Certain expressions are executed in C to perform efficient data transformations.
 
 ## Data masking
 
