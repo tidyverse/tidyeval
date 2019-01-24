@@ -4,6 +4,8 @@ bookdown::gitbook:
   config:
     sharing:
       github: yes
+      facebook: no
+      twitter: no
     toc:
       collapse: section
       before: |
