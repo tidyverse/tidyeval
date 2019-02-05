@@ -99,9 +99,9 @@ To sum up, the distinctive look and feel of data masking UIs requires suspending
 
 ## Unquoting code
 
-Data masking functions prevent the normal evaluation of their arguments by quoting them. Once in possession of the blueprints of their arguments, a data mask is created and the evaluation is resumed in this new context. Unfortunately, delaying code in this way has a flip side. While it is straightforward to substitute values, it is harder to substitute column names in delayed code. To make indirect references to columns, it is necessary to modify the quoted code _before_ it gets evaluated. This is what the `!!` operator, pronounced bang bang, is all about. It is a surgery operator for blueprints of R code.
+Data masking functions prevent the normal evaluation of their arguments by quoting them. Once in possession of the blueprints of their arguments, a data mask is created and the evaluation is resumed in this new context. Unfortunately, delaying code in this way has a flip side. While it is natural to substitute _values_ when you're programming with normal functions using regular evaluation, it is harder to substitute _column names_ in data masking functions that delay evaluation of your code. To make indirect references to columns, it is necessary to modify the quoted code _before_ it gets evaluated. This is exactly what the `!!` operator, pronounced bang bang, is all about. It is a surgery operator for blueprints of R code.
 
-In the world of normal functions, making indirect references is easy. Expressions that yield the same values can be freely interchanged, a property that is sometimes called [referential transparency](https://en.wikipedia.org/wiki/Referential_transparency):
+In the world of normal functions, making indirect references to values is easy. Expressions that yield the same values can be freely interchanged, a property that is sometimes called [referential transparency](https://en.wikipedia.org/wiki/Referential_transparency). The following calls to `my_function()` all yield the same results because they were given the same value as inputs:
 
 ```{r}
 my_function <- function(x) x * 100
