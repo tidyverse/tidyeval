@@ -174,15 +174,14 @@ Looks good! We're now ready to actually run the dplyr pipeline with an indirect 
 starwars %>% summarise(out = sum(!!sym(col), na.rm = TRUE))
 ```
 
+There were two necessary steps to create an indirect reference and properly modify the summarising code:
 
-# Do you need tidy eval {#do-you-need}
+* We first created a piece of blueprint (a symbol) with `sym()`.
+* We used `!!` to insert it in the blueprint captured by `summarise()`.
 
-TODO
+We call the combination of these two steps the __quote and unquote__ pattern. This pattern is the heart of programming with tidy eval functions. We quote an expression and unquote it in another quoted expression. In other words, we create or capture a piece of blueprint, and insert it in another blueprint just before it's captured by a data masking function. This process is also called __interpolation__.
 
-* Using `.data[[`.
-* Scoped variants.
-* Passing dots.
-* Iterating over list columns
+Most of the time though, we don't need to create blueprints manually. We'll get them by quoting the arguments supplied by users. This gives your functions the same usage and feel as tidyverse verbs.
 
 
 # Getting up to speed {#up-to-speed}
