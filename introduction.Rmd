@@ -160,7 +160,7 @@ To refer to column names inside a blueprint, we need to inline blueprint materia
 sym(col)
 ```
 
-Symbols are a special type of string that represent other objects. When a piece of R code is evaluated, every bare variable name is actually a symbol that represent some value as defined in the current context. Let's see what the modified blueprint looks like when we inline a symbol:
+Symbols are a special type of string that represent other objects. When a piece of R code is evaluated, every bare variable name is actually a symbol that represents some value, as defined in the current context. Let's see what the modified blueprint looks like when we inline a symbol:
 
 ```{r}
 rlang::qq_show(
