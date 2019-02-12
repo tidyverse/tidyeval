@@ -184,6 +184,81 @@ We call the combination of these two steps the __quote and unquote__ pattern. Th
 Most of the time though, we don't need to create blueprints manually. We'll get them by quoting the arguments supplied by users. This gives your functions the same usage and feel as tidyverse verbs.
 
 
+# Do you need tidy eval? {#sec:do-you-need}
+
+In the field of computer science, frameworks like tidy evaluation are known as metaprogramming. Modifying the blueprints of computations amounts to programming the program, i.e. metaprogramming. In other languages, this type of approach is often seen as a last resort because it requires new skills and might make your code harder to read. Things are different in R because of the importance of data masking functions, but it is still good advice to consider other options before turning to tidy evaluation. In this section, we review several strategies for solving programming problems with tidyverse packages.
+
+Before diving into tidy eval, make sure to know about the fundamentals of programming with the tidyverse:
+
+* [Fixed column names](#sec:fixed-colnames). A solid function taking data frames with fixed column names is better than a brittle function that uses tidy eval.
+
+* Automating loops.
+
+Tidy evaluation does not have to be hard. It features several lightweight techniques that you can easily pick up in your workflow:
+
+* Pass expressions through `{{` and `...`.
+* Pass column names to `.data[[` and `one_of()`.
+
+All these techniques make it possible and even easy to reuse existing components of tidyverse grammars and compose them into new functions.
+
+
+## Fixed column names {#sec:fixed-colnames}
+
+A simple solution is to write functions that expect data frames containing specific column names. If the computation always operates on the same columns and nothing varies, you don't need any tidy eval. On the other hand, your users must ensure the existence of these columns as part of their data cleaning process.
+
+Say we have a simple pipeline that computes the body mass index for each observation in a tibble:
+
+```{r}
+starwars %>% transmute(bmi = mass / (height / 100)^2)
+```
+
+We could extract this code in a function that takes data frames with columns `mass` and `height`:
+
+```{r}
+compute_bmi <- function(data) {
+  data %>% transmute(bmi = mass / height^2)
+}
+```
+
+It's always a good idea to check the inputs of your functions and fail early with an informative error message when their assumptions are not met. In this case, we should validate the data frame and throw an error when it does not contain the expected columns:
+
+```{r, error = TRUE}
+compute_bmi <- function(data, height_scale = c("m", "cm")) {
+  if (!all(c("mass", "height") %in% names(data))) {
+    stop("`data` must contain `mass` and `height` columns")
+  }
+
+  data %>% transmute(bmi = mass / height^2)
+}
+
+iris %>% compute_bmi()
+```
+
+In fact, we could go even further and validate the contents of the columns in addition to their names:
+
+```{r}
+compute_bmi <- function(data) {
+  if (!all(c("mass", "height") %in% names(data))) {
+    rlang::abort("`data` must contain `mass` and `height` columns")
+  }
+
+  mean_height <- mean(data$height, na.rm = TRUE)
+  if (mean_height > 3) {
+    warning(glue::glue(
+      "Average height is { mean_height }, is it scaled in meters?"
+    ))
+  }
+
+  data %>% transmute(bmi = mass / height^2)
+}
+
+starwars %>% compute_bmi()
+
+starwars %>% mutate(height = height / 100) %>% compute_bmi()
+```
+
+Spending your programming time on the domain logic of your function, such as input and scale validation, may have a greater payoff than learning tidy eval just to improve its syntax. It makes your function more robust to faulty data and reduces the risks of erroneous analyses.
+
 # Getting up to speed {#sec:up-to-speed}
 
 While tidyverse grammars are easy to write in scripts and at the console, they make it a bit harder to reduce code duplication. Writing functions around dplyr pipelines and other tidyeval APIs requires a bit of special knowledge because these APIs use a special type of functions called **quoting functions** in order to make data first class.
