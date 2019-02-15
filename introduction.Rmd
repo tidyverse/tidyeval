@@ -186,20 +186,20 @@ Most of the time though, we don't need to create blueprints manually. We'll get 
 
 # Do you need tidy eval? {#sec:do-you-need}
 
-In the field of computer science, frameworks like tidy evaluation are known as metaprogramming. Modifying the blueprints of computations amounts to programming the program, i.e. metaprogramming. In other languages, this type of approach is often seen as a last resort because it requires new skills and might make your code harder to read. Things are different in R because of the importance of data masking functions, but it is still good advice to consider other options before turning to tidy evaluation. In this section, we review several strategies for solving programming problems with tidyverse packages.
+In computer science, frameworks like tidy evaluation are known as metaprogramming. Modifying the blueprints of computations amounts to programming the program, i.e. metaprogramming. In other languages, this type of approach is often seen as a last resort because it requires new skills and might make your code harder to read. Things are different in R because of the importance of data masking functions, but it is still good advice to consider other options before turning to tidy evaluation. In this section, we review several strategies for solving programming problems with tidyverse packages.
 
-Before diving into tidy eval, make sure to know about the fundamentals of programming with the tidyverse:
+Before diving into tidy eval, make sure to know about the fundamentals of programming with the tidyverse. These are likely to have a better return on investment of time and will also be useful to solve problems outside the tidyverse.
 
 * [Fixed column names](#sec:fixed-colnames). A solid function taking data frames with fixed column names is better than a brittle function that uses tidy eval.
 
 * [Automating loops](#sec:automating-loops). dplyr excels at automating loops. Acquiring a good command of rowwise vectorisation and columnwise mapping may prove very useful.
 
-Tidy evaluation does not have to be hard. It features several lightweight techniques that you can easily pick up in your workflow:
+Tidy evaluation is not all-or-nothing, it encompasses a wide range of features and techniques. Here are a few techniques that are easy to pick up in your workflow:
 
-* Pass expressions through `{{` and `...`.
-* Pass column names to `.data[[` and `one_of()`.
+* Passing expressions through `{{` and `...`.
+* Passing column names to `.data[[` and `one_of()`.
 
-All these techniques make it possible and even easy to reuse existing components of tidyverse grammars and compose them into new functions.
+All these techniques make it possible to reuse existing components of tidyverse grammars and compose them into new functions.
 
 
 ## Fixed column names {#sec:fixed-colnames}
@@ -315,7 +315,7 @@ data %>%
   mutate(rescaled = x / sd(x))
 ```
 
-In fact, `mutate()` enforces vectorisation. Returning smaller vectors is an error except if they have size 1. If the result of a mutate expression is a constant, it is automatically recycled to the tibble or group size. This ensures that all columns have the same length and fit within the tibble constraints of rectangular data:
+In fact, `mutate()` enforces vectorisation. Returning smaller vectors is an error unless if they have size 1. If the result of a mutate expression is a constant, it is automatically recycled to the tibble or group size. This ensures that all columns have the same length and fit within the tibble constraints of rectangular data:
 
 ```{r}
 data %>%
@@ -381,7 +381,7 @@ Everything that exists in R is an object, including functions. If you type the n
 toupper
 ```
 
-In its simplest form, functional programming is about passing a function object as argument to another function called a __mapper__ function. that iterates over a vector to apply the function on each element, and returns all results in a new vector. In other words, a mapper functions writes loops so you don't have to. Here is a manual loop that applies `toupper()` over all elements of a character vector and returns a new vector:
+In its simplest form, functional programming is about passing a function object as argument to another function called a __mapper__ function, that iterates over a vector to apply the function on each element, and returns all results in a new vector. In other words, a mapper functions writes loops so you don't have to. Here is a manual loop that applies `toupper()` over all elements of a character vector and returns a new vector:
 
 ```{r}
 new <- character(length(letters))
@@ -419,7 +419,7 @@ purrr::map_int(mtcars, n_distinct)
 
 dplyr provides variants of the main data manipulation verbs that map functions over a selection of columns. These verbs are known as the [scoped variants](https://dplyr.tidyverse.org/reference/scoped.html) and are recognizable from their `_at`, `_if` and `_all` suffixes.
 
-They support three sorts of selection:
+Scoped verbs support three sorts of selection:
 
 1. `_all` verbs operate on all columns of the data frame. You can summarise all columns of a data frame within groups with `summarise_all()`:
 
@@ -449,7 +449,7 @@ They support three sorts of selection:
     starwars %>% summarise_at(vars(ends_with("_color")), n_distinct)
     ```
 
-The scoped variants of `mutate()` and `summarise()` are the closest analogue to `base::lapply()` and `purrr::map()`. Unlike pure list mappers, the scoped verbs fully implement the dplyr semantics such as groupwise vectorisation or the summary constraints:
+The scoped variants of `mutate()` and `summarise()` are the closest analogue to `base::lapply()` and `purrr::map()`. Unlike pure list mappers, the scoped verbs fully implement the dplyr semantics, such as groupwise vectorisation or the summary constraints:
 
 ```{r, include = FALSE}
 # For printing
