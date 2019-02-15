@@ -204,7 +204,7 @@ All these techniques make it possible to reuse existing components of tidyverse 
 
 ## Fixed column names {#sec:fixed-colnames}
 
-A simple solution is to write functions that expect data frames containing specific column names. If the computation always operates on the same columns and nothing varies, you don't need any tidy eval. On the other hand, your users must ensure the existence of these columns as part of their data cleaning process.
+A simple solution is to write functions that expect data frames containing specific column names. If the computation always operates on the same columns and nothing varies, you don't need any tidy eval. On the other hand, your users must ensure the existence of these columns as part of their data cleaning process. This is why this technique primarily makes sense when you're writing functions tailored to your own data analysis uses, or perhaps in functions that interface with a specific web API for retrieving data. In general, fixed column names are task specific.
 
 Say we have a simple pipeline that computes the body mass index for each observation in a tibble:
 
