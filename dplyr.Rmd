@@ -264,7 +264,7 @@ grouped_mean3 <- function(.data, .group_var, ...) {
 ```
 
 
-### `vars()` - Quote multiple arguments externally
+### `vars()` - Quote multiple arguments externally {#sec:external-quoting}
 
 How could we take multiple summary variables in addition to multiple grouping variables? Internal quoting with `...` has a major disadvantage: the arguments in `...` can only have one purpose. If you need to quote multiple sets of variables you have to delegate the quoting to another function. That's the purpose of `vars()` which quotes its arguments and returns a list:
 

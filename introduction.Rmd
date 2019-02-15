@@ -192,7 +192,7 @@ Before diving into tidy eval, make sure to know about the fundamentals of progra
 
 * [Fixed column names](#sec:fixed-colnames). A solid function taking data frames with fixed column names is better than a brittle function that uses tidy eval.
 
-* Automating loops.
+* [Automating loops](#sec:automating-loops). dplyr excels at automating loops. Acquiring a good command of rowwise vectorisation and columnwise mapping may prove very useful.
 
 Tidy evaluation does not have to be hard. It features several lightweight techniques that you can easily pick up in your workflow:
 
@@ -258,6 +258,234 @@ starwars %>% mutate(height = height / 100) %>% compute_bmi()
 ```
 
 Spending your programming time on the domain logic of your function, such as input and scale validation, may have a greater payoff than learning tidy eval just to improve its syntax. It makes your function more robust to faulty data and reduces the risks of erroneous analyses.
+
+
+## Automating loops {#sec:automating-loops}
+
+Most programming problems involve __iteration__ because data transformations are typically achieved element by element, by applying the same recipe over and over again. There are two main ways of automating iteration in R, __vectorisation__ and __mapping__. Learning how to juggle with the different ways of expressing loops is not only an important step towards acquiring a good command of R and the tidyverse, it will also make you more proficient at solving programming problems.
+
+
+### Vectorisation in dplyr
+
+dplyr is designed to optimise iteration by taking advantage of the vectorisation of many R functions. Rowwise vectorisation is achieved through normal R rules, which dplyr augments with groupwise vectorisation.
+
+
+#### Rowwise vectorisation
+
+Rowwise vectorisation in dplyr is a consequence of normal R rules for vectorisation. A vectorised function is a function that works the same way with vectors of 1 element than with vectors of _n_ elements. The operation is applied elementwise (often at the machine code level, which makes them very efficient). We have already mentioned about the vectorisation of `toupper()`, and many other functions in R are vectorised. One important class of vectorised functions are the arithmetic operators:
+
+```{r}
+# Dividing 1 element
+1 / 10
+
+# Dividing 5 elements
+1:5 / 10
+```
+
+Technically, a function is vectorised when:
+
+* It returns a vector as long as the input.
+* Applying the function on a single element yields the same result than applying it on the whole vector and then subsetting the element.
+
+In other words, a vectorised function `fn` fulfills the following identity:
+
+```{r, eval = FALSE}
+fn(x[[i]]) == fn(x)[[i]]
+```
+
+When you mix vectorised and non-vectorised operations, the combined operation is itself vectorised when the last operation to run is vectorised. Here we'll combine the vectorised `/` function with the summary function `mean()`. The result of this operation is a vector that has the same length as the LHS of `/`:
+
+```{r}
+x <- 1:5
+x / mean(x)
+```
+
+Note that the other combination of operations is not vectorised because in that case the summary operation has the last word:
+
+```{r}
+mean(x / 10)
+```
+
+The dplyr verb `mutate()` expects vector semantics. The operations defining new columns typically return vectors as long as their inputs:
+
+```{r}
+data <- tibble(x = rnorm(5, sd = 10))
+
+data %>%
+  mutate(rescaled = x / sd(x))
+```
+
+In fact, `mutate()` enforces vectorisation. Returning smaller vectors is an error except if they have size 1. If the result of a mutate expression is a constant, it is automatically recycled to the tibble or group size. This ensures that all columns have the same length and fit within the tibble constraints of rectangular data:
+
+```{r}
+data %>%
+  mutate(constant = sd(x))
+```
+
+In contrast to `mutate()`, the dplyr verb `summarise()` expects summary operations that return single constants:
+
+```{r}
+data %>%
+  summarise(sd(x))
+```
+
+
+#### Groupwise vectorisation
+
+Things get interesting with grouped tibbles. dplyr augments the vectorisation of normal R functions with groupwise vectorisation. If your tibble has `ngroup`, the operations are repeated `ngroup` times.
+
+```{r}
+my_division <- function(x, y) {
+  message("I was just called")
+  x / y
+}
+
+# Called 1 time
+data %>%
+  mutate(new = my_division(x, 10))
+
+gdata <- data %>% group_by(g = c("a", "a", "b", "b", "c"))
+
+# Called 3 times
+gdata %>%
+  mutate(new = my_division(x, 10))
+```
+
+If the operation is entirely vectorised, the result will be the same whether the tibble is grouped or not, since elementwise computations are not affected by the values of other elements. But as soon as summary operations are involved, the result depends on the grouping structure because the summaries are computed from group sections instead of whole columns.
+
+```{r}
+# Marginal rescaling
+data %>%
+  mutate(new = x / sd(x))
+
+# Conditional rescaling
+gdata %>%
+  mutate(new = x / sd(x))
+```
+
+Whereas rowwise vectorisation automates loops over the elements of a column, groupwise vectorisation automates loops over the levels of a grouping speficitation. The combination of these is very powerful.
+
+
+### Looping over columns
+
+Rowwise and groupwise vectorisations are means of looping in the direction of rows, applying the same operation to each group and each element. What if you'd like to apply an operation in the direction of columns? This is possible in dplyr by __mapping__ functions over columns.
+
+Mapping functions is part of the [functional programming](https://adv-r.hadley.nz/fp.html) approach. If you're going to spend some time learning new programming concepts, acquiring functional programming skills is likely to have a higher payoff than learning about the metaprogramming concepts of tidy evaluation. Functional programming is inherent to R as it underlies the `apply()` family of functions in base R and the `map()` family from the [purrr package](https://purrr.tidyverse.org/). It is a powerful tool to add to you quiver.
+
+
+#### Mapping functions
+
+Everything that exists in R is an object, including functions. If you type the name of a function without parentheses, you get the function object instead of the result of calling the function:
+
+```{r}
+toupper
+```
+
+In its simplest form, functional programming is about passing a function object as argument to another function called a __mapper__ function. that iterates over a vector to apply the function on each element, and returns all results in a new vector. In other words, a mapper functions writes loops so you don't have to. Here is a manual loop that applies `toupper()` over all elements of a character vector and returns a new vector:
+
+```{r}
+new <- character(length(letters))
+
+for (i in seq_along(letters)) {
+  new[[i]] <- toupper(letters[[i]])
+}
+
+new
+```
+
+Using a mapper function results in much leaner code. Here we apply `toupper()` over all elements of `letters` and return the results as a character vector, as indicated by the suffix `_chr`:
+
+```{r}
+new <- purrr::map_chr(letters, toupper)
+new
+```
+
+In practice, functional programming is all about hiding `for` loops, which are abstracted away by the mapper functions that automate the iteration.
+
+Mapping is an elegant way of transforming data element by element, but it's not the only one. For instance, `toupper()` is actually a vectorised function that already operates on whole vectors element by element. The fastest and leanest code is just:
+
+```{r}
+toupper(letters)
+```
+
+Mapping functions is more useful with functions that are not vectorised or for computations over lists and data frame columns where the vectorisation occurs within the elements or columns themselves. In the following example, we apply a summarising function over all columns of a data frame:
+
+```{r}
+purrr::map_int(mtcars, n_distinct)
+```
+
+
+#### Scoped dplyr variants
+
+dplyr provides variants of the main data manipulation verbs that map functions over a selection of columns. These verbs are known as the [scoped variants](https://dplyr.tidyverse.org/reference/scoped.html) and are recognizable from their `_at`, `_if` and `_all` suffixes.
+
+They support three sorts of selection:
+
+1. `_all` verbs operate on all columns of the data frame. You can summarise all columns of a data frame within groups with `summarise_all()`:
+
+    ```{r}
+    iris %>% group_by(Species) %>% summarise_all(mean)
+    ```
+
+1. `_if` verbs operate conditionally, on all columns for which a predicate returns `TRUE`. If you are familiar with purrr, the idea is similar to the conditional mapper `purrr::map_if()`. Promoting all character columns of a data frame as grouping variables is as simple as:
+
+    ```{r}
+    starwars %>% group_by_if(is.character)
+    ```
+
+1. `_at` verbs operate on a selection of columns. You can supply integer vectors of column positions or character vectors of colunm names.
+
+    ```{r}
+    mtcars %>% summarise_at(1:2, mean)
+
+    mtcars %>% summarise_at(c("disp", "drat"), median)
+    ```
+
+   More interestingly, you can use `vars()`[^fn:vars] to supply the same sort of expressions you would pass to `select()`! The selection helpers make it very convenient to craft a selection of columns to map over.
+
+    ```{r}
+    starwars %>% summarise_at(vars(height:mass), mean)
+
+    starwars %>% summarise_at(vars(ends_with("_color")), n_distinct)
+    ```
+
+The scoped variants of `mutate()` and `summarise()` are the closest analogue to `base::lapply()` and `purrr::map()`. Unlike pure list mappers, the scoped verbs fully implement the dplyr semantics such as groupwise vectorisation or the summary constraints:
+
+```{r, include = FALSE}
+# For printing
+mtcars <- as_tibble(mtcars)
+```
+
+```{r}
+# map() returns a simple list with the results
+mtcars[1:5] %>% purrr::map(mean)
+
+# `mutate_` variants recycle to group size
+mtcars[1:5] %>% mutate_all(mean)
+
+# `summarise_` variants enforce a size 1 constraint
+mtcars[1:5] %>% summarise_all(mean)
+
+# All scoped verbs know about groups
+mtcars[1:5] %>% group_by(cyl) %>% summarise_all(mean)
+```
+
+The other scoped variants also accept optional functions to map over the selection of columns. For instance, you could group by a selection of variables and transform them on the fly:
+
+```{r}
+iris %>% group_by_if(is.factor, as.character)
+```
+
+or transform the column names of selected variables:
+
+```{r}
+storms %>% select_at(vars(name:hour), toupper)
+```
+
+The scoped variants lie at the intersection of purrr and dplyr and combine the rowwise looping mechanisms of dplyr with the columnwise mapping of purrr. This is a powerful combination.
+
+[^fn:vars]: `vars()` is the function that does the quoting of your expressions, and returns blueprints to its caller. This pattern of letting an external helper quote the arguments is called [external quoting](#sec:external-quoting).
+
 
 # Getting up to speed {#sec:up-to-speed}
 
