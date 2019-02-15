@@ -15,10 +15,10 @@ Data masking makes it easy and natural to read and write data manipulation code,
 
 Tidy evaluation is a set of concepts and tools that make it possible to use tidyverse grammars when columns are specified indirectly. In particular, you will need to learn some tidy eval to extract a tidyverse pipeline in a reusable function.
 
-The first chapter [Why and how](#why-how) provides the motivation for tidy eval, presents the problems that it poses in day-to-day programming, and the general theory and tools for solving those. If you are in a hurry, you can jump straight to [Do you need tidy eval?](do-you-need). A lot can be done without writing a single line of tidy eval! If you are positive you need it to solve your problem, [Getting up to speed](#up-to-speed) is a self-contained chapter that will teach you the basic workflow of wrapping a tidyverse pipeline in a reusable function. The book ends with a series of recipes and idioms for solving various dplyr and ggplot2 problems.
+The first chapter [Why and how](#sec:why-how) provides the motivation for tidy eval, presents the problems that it poses in day-to-day programming, and the general theory and tools for solving those. If you are in a hurry, you can jump straight to [Do you need tidy eval?](#sec:do-you-need). A lot can be done without writing a single line of tidy eval! If you are positive you need it to solve your problem, [Getting up to speed](#sec:up-to-speed) is a self-contained chapter that will teach you the basic workflow of wrapping a tidyverse pipeline in a reusable function. The book ends with a series of recipes and idioms for solving various dplyr and ggplot2 problems.
 
 
-# Why and how {#why-how}
+# Why and how {#sec:why-how}
 
 Tidy evaluation is a framework for metaprogramming in R, used throughout the tidyverse to implement data masking. Metaprogramming is about using a programming language to manipulate or modify its own code. This idea is used throughout the tidyverse to change the context of computation of certain pieces of R code.
 
@@ -184,7 +184,7 @@ We call the combination of these two steps the __quote and unquote__ pattern. Th
 Most of the time though, we don't need to create blueprints manually. We'll get them by quoting the arguments supplied by users. This gives your functions the same usage and feel as tidyverse verbs.
 
 
-# Getting up to speed {#up-to-speed}
+# Getting up to speed {#sec:up-to-speed}
 
 While tidyverse grammars are easy to write in scripts and at the console, they make it a bit harder to reduce code duplication. Writing functions around dplyr pipelines and other tidyeval APIs requires a bit of special knowledge because these APIs use a special type of functions called **quoting functions** in order to make data first class.
 
