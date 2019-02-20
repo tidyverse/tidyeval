@@ -223,7 +223,7 @@ compute_bmi <- function(data) {
 It's always a good idea to check the inputs of your functions and fail early with an informative error message when their assumptions are not met. In this case, we should validate the data frame and throw an error when it does not contain the expected columns:
 
 ```{r, error = TRUE}
-compute_bmi <- function(data, height_scale = c("m", "cm")) {
+compute_bmi <- function(data) {
   if (!all(c("mass", "height") %in% names(data))) {
     stop("`data` must contain `mass` and `height` columns")
   }
