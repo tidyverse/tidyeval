@@ -239,7 +239,7 @@ In fact, we could go even further and validate the contents of the columns in ad
 ```{r}
 compute_bmi <- function(data) {
   if (!all(c("mass", "height") %in% names(data))) {
-    rlang::abort("`data` must contain `mass` and `height` columns")
+    stop("`data` must contain `mass` and `height` columns")
   }
 
   mean_height <- mean(data$height, na.rm = TRUE)
