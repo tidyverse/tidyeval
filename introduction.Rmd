@@ -242,7 +242,7 @@ compute_bmi <- function(data) {
     stop("`data` must contain `mass` and `height` columns")
   }
 
-  mean_height <- mean(data$height, na.rm = TRUE)
+  mean_height <- round(mean(data$height, na.rm = TRUE), 1)
   if (mean_height > 3) {
     warning(glue::glue(
       "Average height is { mean_height }, is it scaled in meters?"
