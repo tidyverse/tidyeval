@@ -67,7 +67,7 @@ list(
 
 ## Quoting code
 
-In order to change the context, evaluation must first be suspended before being resumed in a different environment. The technical term for delaying code in this way is **quoting**. Tidyverse grammars quote the code supplied by users as arguments. They don't get results of code but the quoted code itself, whose evaluation can be resumed later on in a data context. In a way, quoted code is like a blueprint for R computations. One important quoting functions in dplyr is `vars()`. This function does nothing but return its arguments as blueprints to be interpreted later on by verbs like `summarise_at()`:
+In order to change the context, evaluation must first be suspended before being resumed in a different environment. The technical term for delaying code in this way is **quoting**. Tidyverse grammars quote the code supplied by users as arguments. They don't get results of code but the quoted code itself, whose evaluation can be resumed later on in a data context. In a way, quoted code is like a blueprint for R computations. One important quoting function in dplyr is `vars()`. This function does nothing but return its arguments as blueprints to be interpreted later on by verbs like `summarise_at()`:
 
 ```{r}
 starwars %>% summarise_at(vars(ends_with("color")), n_distinct)
