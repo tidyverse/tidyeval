@@ -332,7 +332,7 @@ data %>%
 
 #### Groupwise vectorisation
 
-Things get interesting with grouped tibbles. dplyr augments the vectorisation of normal R functions with groupwise vectorisation. If your tibble has `ngroup`, the operations are repeated `ngroup` times.
+Things get interesting with grouped tibbles. dplyr augments the vectorisation of normal R functions with groupwise vectorisation. If your tibble has `ngroup` groups, the operations are repeated `ngroup` times.
 
 ```{r}
 my_division <- function(x, y) {
