@@ -363,7 +363,7 @@ gdata %>%
   mutate(new = x / sd(x))
 ```
 
-Whereas rowwise vectorisation automates loops over the elements of a column, groupwise vectorisation automates loops over the levels of a grouping speficitation. The combination of these is very powerful.
+Whereas rowwise vectorisation automates loops over the elements of a column, groupwise vectorisation automates loops over the levels of a grouping specification. The combination of these is very powerful.
 
 
 ### Looping over columns
