@@ -124,7 +124,7 @@ value <- mean(height, na.rm = TRUE)
 starwars %>% summarise(avg = value)
 ```
 
-Storing a column name in a variable or passing one as function argument requires the tidy eval operator `!!`. This special operator, only available in quoting functions, acts like a surgical operator for modifying blueprints. To understand what it does, it is best to see it in action. The `qq_show()` helper from rlang processes `!!` and prints the resulting blueprint of the computation. As you can observe, `!!` modifies the quoted code by inlining the value of its operand right into the blueprint:
+Storing a column name in a variable or passing one as a function argument requires the tidy eval operator `!!`. This special operator, only available in quoting functions, acts like a surgical operator for modifying blueprints. To understand what it does, it is best to see it in action. The `qq_show()` helper from rlang processes `!!` and prints the resulting blueprint of the computation. As you can observe, `!!` modifies the quoted code by inlining the value of its operand right into the blueprint:
 
 ```{r}
 x <- 1
