@@ -272,7 +272,7 @@ dplyr is designed to optimise iteration by taking advantage of the vectorisation
 
 #### Rowwise vectorisation
 
-Rowwise vectorisation in dplyr is a consequence of normal R rules for vectorisation. A vectorised function is a function that works the same way with vectors of 1 element than with vectors of _n_ elements. The operation is applied elementwise (often at the machine code level, which makes them very efficient). We have already mentioned about the vectorisation of `toupper()`, and many other functions in R are vectorised. One important class of vectorised functions are the arithmetic operators:
+Rowwise vectorisation in dplyr is a consequence of normal R rules for vectorisation. A vectorised function is a function that works the same way with vectors of 1 element as with vectors of _n_ elements. The operation is applied elementwise (often at the machine code level, which makes them very efficient). We have already mentioned the vectorisation of `toupper()`, and many other functions in R are vectorised. One important class of vectorised functions is the arithmetic operators:
 
 ```{r}
 # Dividing 1 element
