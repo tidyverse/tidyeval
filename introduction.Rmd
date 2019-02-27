@@ -315,14 +315,14 @@ data %>%
   mutate(rescaled = x / sd(x))
 ```
 
-In fact, `mutate()` enforces vectorisation. Returning smaller vectors is an error unless if they have size 1. If the result of a mutate expression is a constant, it is automatically recycled to the tibble or group size. This ensures that all columns have the same length and fit within the tibble constraints of rectangular data:
+In fact, `mutate()` enforces vectorisation. Returning a smaller vector is an error unless it has size 1. If the result of a mutate expression has size 1, it is automatically recycled to the tibble or group size. This ensures that all columns have the same length and fit within the tibble constraints of rectangular data:
 
 ```{r}
 data %>%
-  mutate(constant = sd(x))
+  mutate(sigma = sd(x))
 ```
 
-In contrast to `mutate()`, the dplyr verb `summarise()` expects summary operations that return single constants:
+In contrast to `mutate()`, the dplyr verb `summarise()` expects summary operations that return a single value:
 
 ```{r}
 data %>%
