@@ -8,8 +8,7 @@ library("dplyr")
 
 
 # Introduction
-
-Tidyverse grammars like dplyr have a distinctive look and feel. This is in part because their design follows a set of [principles](https://principles.tidyverse.org/). Their most important feature is that they let you work with your data as if they were actual objects in your workspace. In a way, the data frame temporarily becomes the workspace.
+Tidyverse grammars, like dplyr, have a distinctive look and feel. This is in part because they are designed to follow a set of [principles](https://principles.tidyverse.org/). The most important feature of tidyverse grammars is that they let you work with your data as if they were actual objects in your workspace. In a way, the data frame itself becomes a (temporary) workspace.
 
 Data masking makes it easy and natural to read and write data manipulation code, but it has a flip side. It is easier to refer to objects in the mask when you know their names in advance, but it is harder when the names are unknown at the time of writing. In particular, it is harder to make _indirect references_ with column names stored in variables or passed as function arguments.
 
