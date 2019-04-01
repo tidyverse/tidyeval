@@ -370,7 +370,7 @@ Whereas rowwise vectorisation automates loops over the elements of a column, gro
 
 Rowwise and groupwise vectorisations are means of looping in the direction of rows, applying the same operation to each group and each element. What if you'd like to apply an operation in the direction of columns? This is possible in dplyr by __mapping__ functions over columns.
 
-Mapping functions is part of the [functional programming](https://adv-r.hadley.nz/fp.html) approach. If you're going to spend some time learning new programming concepts, acquiring functional programming skills is likely to have a higher payoff than learning about the metaprogramming concepts of tidy evaluation. Functional programming is inherent to R as it underlies the `apply()` family of functions in base R and the `map()` family from the [purrr package](https://purrr.tidyverse.org/). It is a powerful tool to add to you quiver.
+Mapping functions is part of the [functional programming](https://adv-r.hadley.nz/fp.html) approach. If you're going to spend some time learning new programming concepts, acquiring functional programming skills is likely to have a higher payoff than learning about the metaprogramming concepts of tidy evaluation. Functional programming is inherent to R as it underlies the `apply()` family of functions in base R and the `map()` family from the [purrr package](https://purrr.tidyverse.org/). It is a powerful tool to add to your quiver.
 
 
 #### Mapping functions
