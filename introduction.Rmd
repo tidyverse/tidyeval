@@ -408,7 +408,7 @@ Mapping is an elegant way of transforming data element by element, but it's not 
 toupper(letters)
 ```
 
-Mapping functions is more useful with functions that are not vectorised or for computations over lists and data frame columns where the vectorisation occurs within the elements or columns themselves. In the following example, we apply a summarising function over all columns of a data frame:
+Mapping functions are more useful with functions that are not vectorised or for computations over lists and data frame columns where the vectorisation occurs within the elements or columns themselves. In the following example, we apply a summarising function over all columns of a data frame:
 
 ```{r}
 purrr::map_int(mtcars, n_distinct)
