@@ -51,7 +51,7 @@ arg_name(height)
 arg_name(mean(height))
 ```
 
-Lists of quoted expressions require a different approach because we don't want to override user-supplied names. The easiest way is call `enquos()` with `.named = TRUE`. With this option, all unnamed arguments get a default name:
+Lists of quoted expressions require a different approach because we don't want to override user-supplied names. The easiest way is to call `enquos()` with `.named = TRUE`. With this option, all unnamed arguments get a default name:
 
 ```{r}
 args_names <- function(...) {
