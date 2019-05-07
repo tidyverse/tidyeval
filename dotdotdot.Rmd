@@ -15,7 +15,7 @@ In the first chapter we have created `grouped_mean()`, a function that takes one
 
 ## The `...` argument
 
-The dot-dot-dot argument is one of the nicest aspect of the R language. A function that takes `...` accepts any number of arguments, named or unnamed. As a programmer you can do three things with `...`:
+The dot-dot-dot argument is one of the nicest aspects of the R language. A function that takes `...` accepts any number of arguments, named or unnamed. As a programmer you can do three things with `...`:
 
 1.  **Evaluate** the arguments contained in the dots and materialise them in a list by forwarding the dots to `list()`:
 
@@ -180,7 +180,7 @@ rlang::qq_show(group_by(!!vars))
 rlang::qq_show(group_by(!!!vars))
 ```
 
-When we use the unquote operator `!!`, `group_by()` gets a list of expressions. When we unquote-splice with `!!!`, the expressions are forwarded as individual arguments to `group_by()`. Let's use the latter to can fix `grouped_mean2()`:
+When we use the unquote operator `!!`, `group_by()` gets a list of expressions. When we unquote-splice with `!!!`, the expressions are forwarded as individual arguments to `group_by()`. Let's use the latter to fix `grouped_mean2()`:
 
 ```{r}
 grouped_mean2 <- function(.data, .summary_var, ...) {
@@ -205,4 +205,4 @@ When does it become useful to do all this extra work? Whenever you need to modif
 
 Up to now we have used the quote-and-unquote pattern to pass quoted arguments to other quoting functions "as is". With this simple and powerful pattern you can extract complex combinations of quoting verbs into reusable functions.
 
-However tidy eval provides much more flexibility. It is a general purpose meta-programming framework that makes it easy to modify quoted arguments before evaluation. In the next section you'll learn about basic metaprogramming patterns that will allow you to modify expressions before passing them on to other .
+However tidy eval provides much more flexibility. It is a general purpose meta-programming framework that makes it easy to modify quoted arguments before evaluation. In the next section you'll learn about basic metaprogramming patterns that will allow you to modify expressions before passing them on to other functions.
