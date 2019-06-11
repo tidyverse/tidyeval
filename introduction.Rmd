@@ -67,7 +67,7 @@ list(
 
 ## Quoting code
 
-In order to change the context, evaluation must first be suspended before being resumed in a different environment. The technical term for delaying code in this way is **quoting**. Tidyverse grammars quote the code supplied by users as arguments. They don't get results of code but the quoted code itself, whose evaluation can be resumed later on in a data context. In a way, quoted code is like a blueprint for R computations. One important quoting functions in dplyr is `vars()`. This function does nothing but return its arguments as blueprints to be interpreted later on by verbs like `summarise_at()`:
+In order to change the context, evaluation must first be suspended before being resumed in a different environment. The technical term for delaying code in this way is **quoting**. Tidyverse grammars quote the code supplied by users as arguments. They don't get results of code but the quoted code itself, whose evaluation can be resumed later on in a data context. In a way, quoted code is like a blueprint for R computations. One important quoting function in dplyr is `vars()`. This function does nothing but return its arguments as blueprints to be interpreted later on by verbs like `summarise_at()`:
 
 ```{r}
 starwars %>% summarise_at(vars(ends_with("color")), n_distinct)
@@ -124,7 +124,7 @@ value <- mean(height, na.rm = TRUE)
 starwars %>% summarise(avg = value)
 ```
 
-Storing a column name in a variable or passing one as function argument requires the tidy eval operator `!!`. This special operator, only available in quoting functions, acts like a surgical operator for modifying blueprints. To understand what it does, it is best to see it in action. The `qq_show()` helper from rlang processes `!!` and prints the resulting blueprint of the computation. As you can observe, `!!` modifies the quoted code by inlining the value of its operand right into the blueprint:
+Storing a column name in a variable or passing one as a function argument requires the tidy eval operator `!!`. This special operator, only available in quoting functions, acts like a surgical operator for modifying blueprints. To understand what it does, it is best to see it in action. The `qq_show()` helper from rlang processes `!!` and prints the resulting blueprint of the computation. As you can observe, `!!` modifies the quoted code by inlining the value of its operand right into the blueprint:
 
 ```{r}
 x <- 1
@@ -272,7 +272,7 @@ dplyr is designed to optimise iteration by taking advantage of the vectorisation
 
 #### Rowwise vectorisation
 
-Rowwise vectorisation in dplyr is a consequence of normal R rules for vectorisation. A vectorised function is a function that works the same way with vectors of 1 element than with vectors of _n_ elements. The operation is applied elementwise (often at the machine code level, which makes them very efficient). We have already mentioned about the vectorisation of `toupper()`, and many other functions in R are vectorised. One important class of vectorised functions are the arithmetic operators:
+Rowwise vectorisation in dplyr is a consequence of normal R rules for vectorisation. A vectorised function is a function that works the same way with vectors of 1 element as with vectors of _n_ elements. The operation is applied elementwise (often at the machine code level, which makes them very efficient). We have already mentioned the vectorisation of `toupper()`, and many other functions in R are vectorised. One important class of vectorised functions is the arithmetic operators:
 
 ```{r}
 # Dividing 1 element
@@ -315,14 +315,14 @@ data %>%
   mutate(rescaled = x / sd(x))
 ```
 
-In fact, `mutate()` enforces vectorisation. Returning smaller vectors is an error unless if they have size 1. If the result of a mutate expression is a constant, it is automatically recycled to the tibble or group size. This ensures that all columns have the same length and fit within the tibble constraints of rectangular data:
+In fact, `mutate()` enforces vectorisation. Returning a smaller vector is an error unless it has size 1. If the result of a mutate expression has size 1, it is automatically recycled to the tibble or group size. This ensures that all columns have the same length and fit within the tibble constraints of rectangular data:
 
 ```{r}
 data %>%
-  mutate(constant = sd(x))
+  mutate(sigma = sd(x))
 ```
 
-In contrast to `mutate()`, the dplyr verb `summarise()` expects summary operations that return single constants:
+In contrast to `mutate()`, the dplyr verb `summarise()` expects summary operations that return a single value:
 
 ```{r}
 data %>%
@@ -332,7 +332,7 @@ data %>%
 
 #### Groupwise vectorisation
 
-Things get interesting with grouped tibbles. dplyr augments the vectorisation of normal R functions with groupwise vectorisation. If your tibble has `ngroup`, the operations are repeated `ngroup` times.
+Things get interesting with grouped tibbles. dplyr augments the vectorisation of normal R functions with groupwise vectorisation. If your tibble has `ngroup` groups, the operations are repeated `ngroup` times.
 
 ```{r}
 my_division <- function(x, y) {
@@ -363,7 +363,7 @@ gdata %>%
   mutate(new = x / sd(x))
 ```
 
-Whereas rowwise vectorisation automates loops over the elements of a column, groupwise vectorisation automates loops over the levels of a grouping speficitation. The combination of these is very powerful.
+Whereas rowwise vectorisation automates loops over the elements of a column, groupwise vectorisation automates loops over the levels of a grouping specification. The combination of these is very powerful.
 
 
 ### Looping over columns
