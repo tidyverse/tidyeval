@@ -9,8 +9,8 @@ Depends:
     R (>= 3.1.0)
 Imports:
     bookdown,
-    dplyr,
+    dplyr (>= 0.8.2),
     ggplot2 (>= 3.0.0),
-    rlang (>= 0.2.3)
+    rlang (>= 0.4.0)
 URL: http://tidyeval.tidyverse.org, https://github.com/tidyverse/tidyeval
 BugReports: https://github.com/tidyverse/tidyeval/issues

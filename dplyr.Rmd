@@ -84,20 +84,20 @@ grouped_mean(mtcars, cyl, mpg)
 ```
 
 
-### `quo_name()` - Create default column names
+### `as_label()` - Create default column names
 
-Use `quo_name()` to transform a quoted expression to a column name:
+Use `as_label()` to transform a quoted expression to a column name:
 
 ```{r}
 simple_var <- quote(height)
-quo_name(simple_var)
+as_label(simple_var)
 ```
 
 These names are only a default stopgap. For more complex uses, you'll probably want to let the user override the default. Here is a case where the default name is clearly suboptimal:
 
 ```{r}
 complex_var <- quote(mean(height, na.rm = TRUE))
-quo_name(complex_var)
+as_label(complex_var)
 ```
 
 
@@ -130,8 +130,8 @@ grouped_mean <- function(data, group_var, summary_var) {
   summary_var <- enquo(summary_var)
 
   # Create default column names
-  group_nm <- quo_name(group_var)
-  summary_nm <- quo_name(summary_var)
+  group_nm <- as_label(group_var)
+  summary_nm <- as_label(summary_var)
 
   # Prepend with an informative prefix
   group_nm <- paste0("group_", group_nm)
@@ -390,9 +390,9 @@ grouped_mean3 <- function(data, group_vars, summary_vars) {
 Note how we add the default names *before* wrapping the arguments in a `mean()` call. This way we avoid including `mean()` in the name:
 
 ```{r}
-quo_name(quote(mass))
+as_label(quote(mass))
 
-quo_name(quote(mean(mass, na.rm = TRUE)))
+as_label(quote(mean(mass, na.rm = TRUE)))
 ```
 
 We get nicely prefixed default names:

@@ -27,14 +27,14 @@ starwars %>% summarise(average = mean(height, na.rm = TRUE))
 starwars %>% summarise(mean(height, na.rm = TRUE))
 ```
 
-You can create default names by applying `quo_name()` to any expressions:
+You can create default names by applying `as_label()` to any expressions:
 
 ```{r}
 var1 <- quote(height)
 var2 <- quote(mean(height))
 
-quo_name(var1)
-quo_name(var2)
+as_label(var1)
+as_label(var2)
 ```
 
 Including automatically quoted arguments:
@@ -43,7 +43,7 @@ Including automatically quoted arguments:
 arg_name <- function(var) {
   var <- enquo(var)
 
-  quo_name(var)
+  as_label(var)
 }
 
 arg_name(height)
@@ -72,7 +72,7 @@ Argument names are one of the most common occurrence of quotation in R. There is
 ```{r}
 names(c(Mickey = NA))
 
-quo_name(quote(Mickey))
+as_label(quote(Mickey))
 ```
 
 Where there is quotation it is natural to have unquotation. For this reason, tidy eval makes it possible to use `!!` to unquote names. Unfortunately we'll have to use a somewhat peculiar syntax to unquote names because using complex expressions on the left-hand side of `=` is not valid R code:
@@ -119,7 +119,7 @@ grouped_mean2 <- function(.data, .summary_var, ...) {
   group_vars <- enquos(...)
 
   # Get and modify the default name
-  summary_nm <- quo_name(summary_var)
+  summary_nm <- as_label(summary_var)
   summary_nm <- paste0("avg_", summary_nm)
 
   .data %>%
@@ -145,7 +145,7 @@ grouped_mean2 <- function(.data, .summary_var, ...) {
   # Quote the dots with default names
   group_vars <- enquos(..., .named = TRUE)
 
-  summary_nm <- quo_name(summary_var)
+  summary_nm <- as_label(summary_var)
   summary_nm <- paste0("avg_", summary_nm)
 
   # Modify the names of the list of quoted dots
