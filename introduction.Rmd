@@ -148,7 +148,7 @@ rlang::qq_show(
 )
 ```
 
-This code amounts to taking the mean of a string, something that R will not be happy about:
+This code amounts to taking the sum of a string, something that R will not be happy about:
 
 ```{r, error = TRUE}
 starwars %>% summarise(out = sum("height", na.rm = TRUE))
