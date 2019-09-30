@@ -27,6 +27,6 @@ You may also be interested in:
 
 * __"[Tidy eval in 5 minutes](https://www.youtube.com/watch?v=nERXS3ssntw)"__ is a quick 5 minutes video that explains the big ideas behind tidy evaluation. It's a great way to get an overview of concepts before diving in other tutorials.
 
-* __"[Tidy eval webinar](https://www.rstudio.com/resources/webinars/tidy-eval/)"__ is a one hour tutorial video on tidy evaluation.
+* __"[Tidy eval webinar](https://resources.rstudio.com/webinars/tidyeval)"__ is a one hour tutorial video on tidy evaluation.
 
 * __"[The second edition of Advanced R](http://adv-r.hadley.nz/)"__ which includes a whole chapter on meta programming with tidy eval.
