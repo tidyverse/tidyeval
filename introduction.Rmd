@@ -671,10 +671,10 @@ df <- data.frame(
   var = 2
 )
 
-df$y
-
 var <- "y"
 df[[var]]
+
+df$y
 ```
 
 Technically, `[[` is an evaluating function while `$` is a quoting function.  You can indirectly refer to columns with `[[` because the subsetting index is evaluated, allowing indirect references. The following expressions are completely equivalent:
