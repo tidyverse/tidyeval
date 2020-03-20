@@ -138,13 +138,13 @@ When we need to modify the arguments or their names, we can't simply forward the
 While the singular `enquo()` returns a single quoted argument, the plural variant `enquos()` returns a list of quoted arguments. Let's use it to quote the dots:
 
 ```{r}
-grouped_mean2 <- function(data, summary_var, ...) {
-  summary_var <- enquo(summary_var)
-  group_vars <- enquos(...)
+grouped_mean2 <- function(.data, .summary_var, ...) {
+  .summary_var <- enquo(.summary_var)
+  .group_vars <- enquos(...)
 
   data %>%
-    group_by(!!group_vars) %>%
-    summarise(mean = mean(!!summary_var))
+    group_by(!!.group_vars) %>%
+    summarise(mean = mean(!!.summary_var))
 }
 ```
 
@@ -184,11 +184,11 @@ When we use the unquote operator `!!`, `group_by()` gets a list of expressions. 
 
 ```{r}
 grouped_mean2 <- function(.data, .summary_var, ...) {
-  summary_var <- enquo(.summary_var)
-  group_vars <- enquos(...)
+  .summary_var <- enquo(.summary_var)
+  .group_vars <- enquos(...)
 
   .data %>%
-    group_by(!!!group_vars) %>%
+    group_by(!!!.group_vars) %>%
     summarise(mean = mean(!!summary_var))
 }
 ```
