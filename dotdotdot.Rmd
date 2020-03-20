@@ -189,7 +189,7 @@ grouped_mean2 <- function(.data, .summary_var, ...) {
 
   .data %>%
     group_by(!!!.group_vars) %>%
-    summarise(mean = mean(!!summary_var))
+    summarise(mean = mean(!!.summary_var))
 }
 ```
 
